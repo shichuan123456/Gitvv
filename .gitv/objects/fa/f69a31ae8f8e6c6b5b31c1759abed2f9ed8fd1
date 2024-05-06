@@ -1,0 +1,8 @@
+blob e7190a1b8314c2a532b66a83ae1e4a9cd6cc5385 esm.mjs
+blob d2f4a852862347d54cb4f7feec03b914eda211e8 index.js
+tree 5ac871af57337d5cd224c66a9f796ce1f043c457 lib
+blob 10f997ab104594695189c3fca8fa6c65ae9ccdd6 LICENSE
+blob 4eabb970ef40263e388f60ee31d3a23c86ff5151 package-support.json
+blob 432375a65a25952e2169cc24ff50b2feceaaaba1 package.json
+blob ba32e91ddef91977dfe0e0852162bdbb4cf6b559 Readme.md
+tree ad687a1d0ecf29e407b15f1e3bfd870093fa7ff7 typings

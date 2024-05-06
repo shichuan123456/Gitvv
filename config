@@ -1,0 +1,15 @@
+[core]
+  repositoryformatversion = 0
+  filemode = false
+  bare = true
+  logallrefupdates = true
+  symlinks = false
+  ignorecase = true
+
+[remote "origin"]
+  url = http://101.192.739.2146:8190/fds-fdsfe-repository.git
+  fetch = +refs/heads/*:refs/remotes/origin/*
+
+[branch]
+  remote = origin
+  merge = refs/heads/master
