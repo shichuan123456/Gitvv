@@ -1,5 +1,5 @@
 
-上小节中，我们已针对`git commit`命令的核心功能进行了全面且细致的前期准备，通过深入的需求分析，我们已清晰明了该命令的期望行为。在详尽地剖析了命令的实现步骤后，这小节我们将正式迈入实践阶段，亲自动手实现`git commit`命令。通过这一实践过程，我们将更加深入地掌握Git的核心原理，同时进一步提升我们的编程技巧与问题解决能力。
+上小节中，我们已针对`git commit`命令的核心功能进行了全面且细致的前期准备，通过深入的需求分析，我们已清晰明了该命令的期望行为。在详尽地剖析了命令的实现步骤后，本小节我们将正式亲手实现我们自己的`gitv commit`命令。通过这一实现过程，我们将更加深入地掌握`Git`的核心原理，同时进一步提升我们的编程技巧与问题解决能力。
 
 ## **准备工作**
 
@@ -8,7 +8,7 @@
 ```js
 // bin/index.js
 // ...
-program  
+program
   .command('commit')  
   // 添加 -m 或 --message 选项，并设置描述
   .option('-m, --message <message>', 'commit message')   
@@ -18,15 +18,15 @@ program
     // 检查 -m 参数是否已提供并且不为空  
     if (!options.message || options.message.trim() === '') {  
       console.error('Error: Commit message is required and cannot be empty.');  
-      process.exit(1); // 退出程序并返回错误码 1
+      process.exit(1); // 退出程序并返回错误码 1  
     }  
   })
 ```
-在`Git`中，执行提交操作时，如果未使用`-m`参数来指定提交信息，`Git`会进入交互式模式，并打开`COMMIT_EDITMSG`文件以便用户添加和保存提交信息。然而，在我们设计的`gitv`命令行工具中，我们并未实现这种交互式模式，而是选择通过报错提示用户需要提供提交信息。
+在Git中，执行提交操作时，如果未使用`-m`参数来指定提交信息，Git会进入交互式模式，并打开`COMMIT_EDITMSG`文件以便用户添加和保存提交信息。然而，在我们设计的`gitv`命令行工具中，我们并未实现这种交互式模式，而是选择通过报错提示用户需要提供提交信息
 
 ###  添加功能模块
 
-   业务功能需要封装在各自的类模块中，所以我们新建`src/GitvCommit.js`文件，并初始化`GitvCommit`类：
+  业务功能需要封装在各自的类模块中，所以我们新建`src/GitvAdd.js`文件，并初始化`GitvAdd`类：
 
 ```js
 // src/GitvAdd.js
@@ -37,19 +37,15 @@ class GitvCommit {
     }
     // 具体实现commit命令的业务逻辑
     commit() {
-      try {
-        // 必须是Gitv仓库
-        if (!utils.isInGitvRepo()) throw new Error("not a Gitv repository");
-        // 不能是裸仓库
-        if (utils.getRepositoryType() === "bare") throw new Error("this operation must be run in a Gitv work tree");
-      } catch(err) {
-        console.error(error.message);
-      }
+       // 必须是Gitv仓库
+      if (!utils.isInGitvRepo()) throw new Error("not a Gitv repository");
+      // 不能是裸仓库
+      if (utils.getRepositoryType() === "bare") throw new Error("this operation must be run in a Gitv work tree");
     }
 }
 module.exports = GitvCommit;
 ```
-`gitv commit`命令是用于将暂存区的改动提交到本地仓库中。所以执行这个命令的前提是你必须在一个已经初始化为`Gitv`仓库的目录中，而且该仓库不能是裸仓库。裸它不包含工作目录，因此无法进行代码修改和提交操作。
+`gitv commit` 命令的执行需要确保当前目录是一个非裸的 `Gitv` 仓库，以确保用户能够在包含实际文件的工作环境中进行版本提交。我们直接使用封装的工具方法进行校验，以确保命令在正确的上下文中执行。
 
    下面我们在`Gitv`中实例化`GitvCommit`并调用`commit`方法实现该功能:
 
@@ -70,7 +66,7 @@ class Gitv {
 
 ###  **创建树对象**
 根据当前暂存区的状态创建一个新的树对象，并返回其哈希值。这个树对象代表了暂存区中所有文件的当前状态。
-暂存区格式如下:
+暂存区格式如下：
 
 ![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/b8e75a1dc6f541e7af7e1ad3420aec82~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=564&h=254&s=34776&e=png&b=212121)
 我们通过封装的index的read方法读取出index对象，格式如下：

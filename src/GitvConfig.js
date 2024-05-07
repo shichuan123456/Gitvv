@@ -1,5 +1,6 @@
 const utils = require("./Utils")
 const path = require("path")
+const fs = require("fs")
 
 class GitvConfig {
     constructor(opts) {
@@ -41,7 +42,7 @@ class GitvConfig {
     }
 
     read() {
-        const gitConfigFile = utils.getResourcePath('config'); 
+        const gitConfigFile = utils.getResourcePath('config');
         const configContent = fs.readFileSync(gitConfigFile, 'utf-8');
 
         // 存储最终结果的对象
@@ -106,6 +107,7 @@ class GitvConfig {
                 }
             }
         })
+        return config;
     }
 
     // 获取Gitv中的默认配置

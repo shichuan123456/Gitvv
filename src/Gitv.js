@@ -3,6 +3,7 @@ const GitvAdd = require("./GitvAdd")
 const GitvCommit = require("./GitvCommit");
 const GitvClone = require("./GitvClone");
 const GitvBranch = require("./GitvBranch");
+const GitvRemote = require("./GitvRemote");
 class Gitv {
   constructor() {}
   init(directoryTarget, options) {
@@ -31,6 +32,11 @@ class Gitv {
   branch(branchName, options) {
     this.gitvBranch = new GitvBranch(branchName, options)
     this.gitvBranch.branch();
+  }
+
+  remote(url, options) {
+    this.gitvRemote = new GitvRemote(url, options)
+    this.gitvRemote.remote();
   }
 }
 

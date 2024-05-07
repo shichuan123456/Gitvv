@@ -12,6 +12,7 @@ class GitvCommit {
     }
 
     async commit() {
+        console.log("gitv commit -m \"123456\"");
         try {
             // 必须是Gitv仓库
             if (!utils.isInGitvRepo()) throw new Error("not a Gitv repository");

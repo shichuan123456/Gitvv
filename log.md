@@ -2,117 +2,95 @@
 theme: fancy
 highlight:  vs
 ---
-在上一节中，我们顺利完成了`git commit`方法的实现，使本地仓库的工作流程得以全面打通。接下来，我们将聚焦于与远程仓库的交互，以便实现更为高效和便捷的协作与版本控制。
+在之前的章节中，我们深入学习了如何使用 `git commit` 命令来记录项目的变化，以及如何利用 `git merge` 来整合不同分支上的工作。我们明白了每一次的 `commit` 都是项目历史中不可或缺的一部分，记录了项目从起步到成长的每一个足迹。那么，当我们想要回顾这些足迹，查询仓库的 `commit` 历史记录时，应该怎么做呢？答案就是使用 `git log` 命令。
 
-在与远程仓库的交互中，`git remote`命令扮演着至关重要的角色。通过它，我们能够查看、添加、修改或删除远程仓库的记录。例如，使用`git remote -v`可以查看当前已配置的远程仓库及其对应的`URL`；而`git remote add <name> <url>`则允许我们添加一个新的远程仓库引用。这些功能为后续的`git pull`、`git push`等远程交互操作奠定了坚实的基础。
+`git log` 是 `Git` 中的一个核心命令，它为我们提供了一个强大的工具来浏览项目的所有提交。每一次提交都会在这里留下它的印记，包括独特的哈希值、作者信息、提交日期以及提交说明。这些信息不仅可以帮助我们回顾项目的成长历程，还能帮助我们理解代码变更的上下文，从而更好地维护和管理项目。
 
-一旦我们配置好了远程仓库，就可以通过`git pull`命令从远程仓库拉取最新的代码和提交，将其合并到本地的仓库中；而`git push`命令则允许我们将本地的提交推送到远程仓库，与团队成员共享我们的工作成果。
+## **`git log`的基本使用**
 
-通过与远程仓库的交互，我们将能够更好地协同工作，确保代码的版本控制更加高效、稳定。这也是我们在实现`gitv`命令集时不可或缺的一步，将为用户提供更加完整、更加强大的版本控制工具。
+1. 默认输出
+当你直接运行 `git log` 命令时，`Git` 会以默认格式显示提交历史。每个提交都会显示一行摘要信息，包括提交的哈希值（`commit hash`）、作者（`Author`）、日期（`Date`）和提交说明（`commit message`）。
+`
+    ```bash
+    $ git log  
+    commit 1234567890abcdef1234567890abcdef12345678  
+    Author: John Doe <john.doe@example.com>  
+    Date:   Mon Mar 1 21:39:13 2023 +0800  
 
-现在，我们正式踏上探索`gitv remote`的旅程，携手共进，一同深入学习`gitv remote`命令的核心功能与实现细节。
+        Add feature X  
 
+    commit 9876543210fedcba9876543210fedcba98765432  
+    Author: Jane Smith <jane.smith@example.com>  
+    Date:   Fri Feb 28 15:20:34 2023 +0800  
 
-## **git remote的使用**
+        Fix bug Y  
 
-`git remote`是Git中一个非常重要的命令，下面我们将详细介绍`git remote`的使用方法，并通过添加命令执行结果展示来帮助读者更好地理解。
-1.  **查看远程仓库**
+    # ... 更多的提交信息
+    ```
+2. 限制输出数量
+使用 -n 或 --max-count 选项可以限制显示的提交数量。例如，要显示最近的3个提交，可以使用以下命令：
+    ```bash
+    $ git log -n 3  
+    # 或者  
+    $ git log --max-count=3
+    ```
+3. 定制输出格式
+使用 --pretty 选项可以定制 git log 的输出格式。例如，使用 oneline 格式可以只显示提交的哈希值和提交说明，每行一条信息：
 
-使用`git remote`命令可以查看当前仓库中已经配置的远程仓库的名称。执行该命令后，`Git`会列出当前仓库中已经配置的远程仓库的名称。
+    ```bash
+    $ git log --pretty=oneline  
+    1234567890abcdef1234567890abcdef12345678 Add feature X  
+    9876543210fedcba9876543210fedcba98765432 Fix bug Y  
+    # ... 更多的提交信息
+    ```
+   你还可以使用自定义的格式字符串来显示你想要的任何信息。例如，以下命令将显示提交的哈希值、作者和提交说明：
 
-```sh
-	$ git remote
-	origin  
-  second-party
+    ```bash
+    $ git log --pretty=format:"%h - %an, %ar : %s"  
+    1234567 - John Doe, Mon Mar 1 21:39:13 2023 +0800 : Add feature X  
+    9876543 - Jane Smith, Fri Feb 28 15:20:34 2023 +0800 : Fix bug Y  
+    # ... 更多的提交信息
+    ```
+其中，%h 表示提交的简短哈希值，%an 表示作者姓名，%ar 表示作者日期（相对格式），%s 表示提交说明。
+
+4. 搜索提交
+使用 --grep 选项可以在提交说明中搜索特定的关键词或模式。例如，要搜索包含 "feature" 的提交，可以使用以下命令：
+
+```bash
+$ git log --grep="feature"
+```
+5. 显示合并提交
+默认情况下，git log 会隐藏合并提交（`merge commits`）。如果你想要显示它们，可以使用 `--merges` 选项：
+
+```bash
+$ git log --merges
 ```
 
-当我们要查看每个远程仓库的详细信息，可以使用`git remote -v`命令，它可以查看当前仓库的所有远程仓库及其对应的`URL`。执行该命令后，`Git`会列出所有已配置的远程仓库及其详细信息。
+6. 显示图形化的提交历史
 
-```sh
-	$ git remote -v
-	origin  https://github.com/username/repository1.git (fetch)  
-	origin  https://github.com/username/repository1.git (push)
-  second-party  https://github.com/secondparty/repository2.git (fetch)
-  second-party  https://github.com/secondparty/repository2.git (push)
+虽然 `git log` 本身以文本形式显示提交历史，但你可以结合其他工具（如 `gitk` 或 `git log --graph`）以图形化的方式查看提交历史。
+
+使用 `--graph` 选项可以在控制台中显示一个简化的 ASCII 图形来表示分支和合并：
+
+```bash
+$ git log --graph --oneline  
+* 1234567 (HEAD -> master) Add feature X  
+*   9abcefd Merge branch 'feature-branch'  
+|\  
+| * 7654321 Commit on feature-branch  
+|/  
+* 9876543 Fix bug Y  
+# ... 更多的提交信息
 ```
-
-上述命令执行结果中，`origin`是远程仓库的名名称，`https://github.com/username/repository.git`是远程仓库的URL。`(fetch)`和`(push)`分别表示该远程仓库用于获取（fetch）和推送（push）代码的URL，`Git`允许可以有多个远程仓库，其中`second-party`是另外一个远程仓库的名称。
-
-2.  **添加远程仓库**
-
-当我们要将本地仓库与一个新的远程仓库关联起来时，可以使用`git remote add`命令。通过指定一个名字和远程仓库的URL，我们可以建立这种关联。
-
-```sh
-	$ git remote add third-party https://github.com/anotheruser/repository.git
-```
-
-执行上述命令后，Git会将新的远程仓库添加到本地仓库的配置中。我们可以通过再次执行`git remote -v`命令来验证远程仓库是否已成功添加。
-
-```sh
-	$ git remote -v  
-	origin  https://github.com/username/repository1.git (fetch)  
-	origin  https://github.com/username/repository1.git (push)
-  second-party  https://github.com/secondparty/repository2.git (fetch)
-  second-party  https://github.com/secondparty/repository2.git (push)
-  third-party https://github.com/thirdparty/repository3.git (fetch)
-  third-party https://github.com/thirdparty/repository3.git (push)
-```
-
-从执行结果中可以看到，除了原有的`origin`和`second-party`远程仓库外，还新增了名为`third-party`的远程仓库，并显示了其对应的URL。
-
-3.  **修改远程仓库**
-
-如果远程仓库的URL发生了变化，我们可以使用`git remote set-url`命令来更新它。这确保了我们的本地仓库始终指向正确的远程仓库。
-
-```sh
-	$ git remote set-url third-party https://new-url-for-thirdparty.git
-```
-
-执行上述命令后，Git会将`third-party`远程仓库的URL更新为新的地址。我们可以再次执行`git remote -v`命令来验证URL是否已成功更新。
-
-```sh
-	$ git remote -v  
-	origin  https://github.com/username/repository1.git (fetch)  
-	origin  https://github.com/username/repository1.git (push)
-  second-party  https://github.com/secondparty/repository2.git (fetch)
-  second-party  https://github.com/secondparty/repository2.git (push)
-  third-party https://new-url-for-thirdparty.git (fetch)
-  third-party https://new-url-for-thirdparty.git (fetch) 
-```
-
-从执行结果中可以看到，`third-party`远程仓库的URL已经更新为新的地址。
-
-4.  **删除远程仓库**
-
-当不再需要某个远程仓库时，可以使用`git remote remove`或简写为`git remote rm`命令将其删除。这有助于清理不再使用的远程仓库引用，保持仓库的整洁。
-
-```sh
-	$ git remote rm third-party
-```
-
-执行上述命令后，Git会从本地仓库的配置中删除名为`third-party`的远程仓库引用。我们可以再次执行`git remote -v`命令来验证远程仓库是否已被成功删除。
-
-```sh
-	$ git remote -v  
-	origin  https://github.com/username/repository1.git (fetch)  
-	origin  https://github.com/username/repository1.git (push)
-  second-party  https://github.com/secondparty/repository2.git (fetch)
-  second-party  https://github.com/secondparty/repository2.git (push)
-```
-
-从执行结果中可以看到，`third-party`远程仓库已经被成功删除。
-
-通过以上命令的执行结果展示，我们可以清晰地看到Git Remote命令在添加、修改和删除远程仓库时的具体操作和效果。这些命令为我们管理远程仓库提供了极大的便利，使得我们可以轻松地与远程仓库进行交互，实现代码的共享、同步和协作。
+以上只是 git log 的一些基本用法。通过结合不同的选项和参数，你可以根据自己的需求定制 git log 的输出，以便更好地浏览和理解项目的提交历史。
 
 ## **三、需求分析**
 
 ### **概述实现目标**
 
-`git remote` 的本质是实现 `Git` 本地仓库与远程仓库之间的连接。`Git` 是一个分布式版本控制系统，它允许开发者在本地进行版本控制操作，同时也需要与远程仓库进行同步和协作。`git remote` 命令提供了管理这些远程仓库引用的机制。
+`git log` 的本质在于对 `Git` 仓库中的对象数据库进行遍历和查询，以检索和展示提交历史。Git 使用了一个基于内容的寻址系统（`content-addressable system`），其中每个对象（如提交、树、文件等）都有一个唯一的哈希值（`SHA-1` 哈希，尽管 `Git` 正在逐步迁移到 `SHA-256`）。这些对象以键值对的形式存储在对象数据库中，其中键是对象的哈希值，值是对象的实际内容。
 
-本质上，`git remote` 允许开发者定义、查看、修改和删除与远程仓库的关联。这些关联（通常称为远程引用或远程名）在 `Git` 配置中保存，用于标识远程仓库的位置和访问方式。通过 `git remote` 命令，使得开发者能够方便地管理和操作与远程仓库之间的连接，从而实现版本控制的协作和同步。
-
-实现 `git remote` 的命令的本质是对 `Git` 的配置文件进行操作，特别是 `.git/config` 文件的操作，因为 `Git` 使用`config`配置文件来存储关于远程仓库的信息。当用户执行 `git remote` 相关的命令时，`Git` 会读取或修改 `.git/config` 文件中的相关条目，以管理远程仓库的引用。
+当执行 `git log` 命令时，`Git` 会从某个指定的提交（通常是 `HEAD`）开始，并遍历该提交所引用的父提交，从而构建一个提交历史的图。然后，`Git` 会根据用户提供的选项和参数来过滤和排序这些提交，并将它们以适当的格式输出到终端或其他地方。
 
 ### **命令实现详细剖析与实现**
 

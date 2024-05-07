@@ -72,8 +72,8 @@ program
   .option('--remove <name>', 'Remove an existing remote repository')  
   .option('--set-url <name> <url>', 'Change the URL of an existing remote repository')  
   .option('--rename <oldName> <newName>', 'Rename an existing remote repository')  
-  .action((url, options) => {  
-    gitv.remote(url, options); // 这里应该打印出包含所有选项和参数的对象  
+  .action((url, options) => { 
+    gitv.remote(url, options); // 这里应该打印出包含所有选项和参数的对象
   });
 
 program
