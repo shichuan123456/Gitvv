@@ -19,7 +19,7 @@ class GitvInit {
        console.log("GitvInit initialized successfully")
     }
 
-    getGitvMapper = () => {        
+    getGitvMapper = () => {       
         const gitvInitConfig =  {
             HEAD: "ref: refs/heads/master\n",
             config: this.GitConfig.objToGitConfigString(this.GitConfig.generateDefaultConfig()),

@@ -1995,4 +1995,4 @@ if (require.main === module) {
   }
 }
 
-gitlet.init()
+gitlet.status();

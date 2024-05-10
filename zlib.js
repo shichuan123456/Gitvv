@@ -2,7 +2,7 @@ const zlib = require('zlib');
 const util = require('util');
 const fs = require('fs');
 
-const filename = 'C:\\workspace\\myers\\.gitv\\objects\\abc';
+const filename = 'C:\\workspace\\myers\\abc';
 
 const dataToCompress = 'Hello, world!';
 const gzip = util.promisify(zlib.gzip);
@@ -20,20 +20,20 @@ const writeFile = util.promisify(fs.writeFile);
 // }
 
 // compressAndWriteToFile(filename, dataToCompress);
-// zlib.gzip(dataToCompress, (err, compressedData) => {
-//     if (err) {
-//         console.error(err);
-//         return;
-//     }
+zlib.gzip(dataToCompress, (err, compressedData) => {
+    if (err) {
+        console.error(err);
+        return;
+    }
 
-//     fs.writeFile(filename, compressedData, (err) => {
-//         if (err) {
-//             console.error(err);
-//             return;
-//         }
-//         console.log(`Data compressed and written to ${filename}`);
-//     });
-// });
+    fs.writeFile(filename, compressedData, (err) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        console.log(`Data compressed and written to ${filename}`);
+    });
+});
 
 fs.readFile(filename, (err, data) => {
     if (err) {
