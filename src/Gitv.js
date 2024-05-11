@@ -4,6 +4,7 @@ const GitvCommit = require("./GitvCommit");
 const GitvClone = require("./GitvClone");
 const GitvBranch = require("./GitvBranch");
 const GitvRemote = require("./GitvRemote");
+const GitvLog = require("./GitvLog");
 class Gitv {
   constructor() {}
   init(directoryTarget, options) {
@@ -37,6 +38,11 @@ class Gitv {
   remote(url, options) {
     this.gitvRemote = new GitvRemote(url, options)
     this.gitvRemote.remote();
+  }
+
+  log(options) {
+    this.gitvLog = new GitvLog(options)
+    this.gitvLog.log();
   }
 }
 

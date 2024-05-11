@@ -1,5 +1,5 @@
 {
-  "name": "gv",
+  "name": "gitv",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "gv": "bin/index.js"
+    "gitv": "bin/index.js"
   },
   "keywords": [],
   "author": "",

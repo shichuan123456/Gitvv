@@ -76,6 +76,17 @@ program
     gitv.remote(url, options); // 这里应该打印出包含所有选项和参数的对象
   });
 
+  // 定义 gitv log 命令  
+program  
+.command('log')  
+.description('Show commit logs')  
+.option('-n, --number <number>', 'Number of commits to show', parseInt) // 将输入的字符串转换为整数  
+.option('--oneline', 'Show each commit on a single line')  
+.option('--graph', 'Draw a text-based graph of the commit history')  
+.action((options) => {   
+  gitv.log(options); 
+});  
+
 program
   .command('clone [remote_repository_url] [local_directory]')
   .description('Clone a remote repository to the local machine')
