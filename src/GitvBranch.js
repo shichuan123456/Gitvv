@@ -15,7 +15,7 @@ class GitvBranch {
         const gitvBranchActions = {
             getLocalBranches: async () => await this.getLocalBranches(),
             getRemoteBranches: () => this.getRemoteBranches(),
-            getALLBranches: () => this.getAllBranches(),
+            getAllBranches: () => this.getAllBranches(),
             addBranch: (branchName) => this.addBranch(branchName),
             deleteBranch: (branchName) => this.deleteBranch(branchName),
             renameBranch: (branchName, newBranch) => this.renameBranch(branchName, newBranch),

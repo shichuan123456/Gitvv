@@ -184,6 +184,73 @@ class GitvRef {
         
     }
 
+
+// 异步方法用于获取指定分支的哈希值
+// 参数branch为要获取哈希值的分支，默认为'HEAD'
+
+async getBranchHash(branch = 'HEAD') {
+    let refPath = `${this.headFilePath}`;
+    let headContent;
+    
+    try {
+        // 尝试读取HEAD文件的内容
+        headContent = await fs.promises.readFile(refPath, 'utf8');
+        headContent = headContent.trim();
+        
+        // 检查HEAD是否直接是一个合法的hash值
+        if (/^[0-9a-f]{40}$/.test(headContent)) {
+            return headContent; // 返回哈希值字符串
+        }
+        
+        // 如果HEAD是一个符号引用（以'ref: '开头），解析出实际的分支引用路径并读取
+        if (headContent.startsWith('ref: ')) {
+            const headContentList = headContent.split('/');
+            refPath = `${this.localBranchesDir}/${headContentList[headContentList.length - 1]}`; // 移除'ref: '前缀
+            headContent = await fs.promises.readFile(refPath, 'utf8');
+            return headContent.trim(); // 返回哈希值字符串
+        } else {
+            throw new Error('Unexpected format in .git/HEAD');
+        }
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            throw new Error('Git repository not found or invalid branch provided');
+        } else {
+            throw error;
+        }
+    }
+}
+
+    // async getBranchHash(branch = 'HEAD') {
+    //     let refPath = `${this.headFilePath}`;
+    //     let headContent;
+    //     try {
+    //         // 尝试读取HEAD的内容
+    //         headContent = await fs.promises.readFile(refPath, 'utf8');
+    //         headContent = headContent.trim();
+    
+    //         // 检查HEAD是否直接是一个合法的hash值
+    //         if (/^[0-9a-f]{40}$/.test(headContent)) {
+    //             return headContent;
+    //         }
+            
+    //         // 如果HEAD是一个符号引用（以'ref: '开头），解析出实际的分支引用路径并读取
+    //         if (headContent.startsWith('ref: ')) {
+    //             const headContentList = headContent.split('/')
+    //             refPath = `${this.localBranchesDir}/${headContentList[headContentList.length-1]}`; // 移除'ref: '前缀
+    //             headContent = await fs.promises.readFile(refPath, 'utf8');
+    //             return headContent.trim();
+    //         } else {
+    //             throw new Error('Unexpected format in .git/HEAD');
+    //         }
+    //     } catch (error) {
+    //         if (error.code === 'ENOENT') {
+    //             throw new Error('Git repository not found or invalid branch provided');
+    //         } else {
+    //             throw error;
+    //         }
+    //     }
+    // }
+
     // isRef(refStr) {
     //     if (refStr === undefined) {
     //         return false;

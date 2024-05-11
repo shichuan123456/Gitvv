@@ -1,9 +1,10 @@
 const utils = require("./Utils")
 const index = require("./GitvIndex")
-// const refs = require("./GitvRefs")
+const gitvRef = require("./GitvRef")
 const fs = require('fs').promises;
 const path = require('path');
-
+const refs = new gitvRef()
+const Commit = require('./Commit')
 class GitvCommit {
     constructor({
         message
@@ -12,7 +13,6 @@ class GitvCommit {
     }
 
     async commit() {
-        console.log("gitv commit -m \"123456\"");
         try {
             // 必须是Gitv仓库
             if (!utils.isInGitvRepo()) throw new Error("not a Gitv repository");
@@ -29,23 +29,28 @@ class GitvCommit {
             } else {
                 const msg = await this.getCommitMsg();
                 // var commitHash = objects.writeCommit(treeHash, msg, refs.commitParentHashes());
-                var commitHash = objects.writeCommit(treeHash, msg, headHash);
-                gitlet.update_ref("HEAD", commitHash);
-                return "[" + headNameOrDesc + " " + commitHash + "] " + msg;
+                // var commitHash = objects.writeCommit(treeHash, msg, headHash);
+                // gitlet.update_ref("HEAD", commitHash);
+                const commit = new Commit(treeHash, msg);
+                const commitObject = commit.commitObject();
+                const commitHash = await this.writeCommit(commitObject)
+                console.log("[" + headNameOrDesc + " " + headHash + "] " + msg, '====>>>', commitHash)
+                return "[" + headNameOrDesc + " " + headHash + "] " + msg;
             }
         } catch (err) {
-            console.error(error.message);
+            console.error(err.message);
         }
     }
 
     async getCommitMsg() {
         try {
             const getResourcePath = utils.getResourcePath;
-            const mergeMsgPath = getResourcePath("MERGE_MSG");
-            const mergeHeadPath = getResourcePath("MERGE_HEAD");
+
+            const mergeMsgPath = utils.getResourcePath("MERGE_MSG");
+            const mergeHeadPath = utils.getResourcePath("MERGE_HEAD");
             // 检查两个文件是否存在  
             if (await utils.checkFileExistence(mergeMsgPath) && await utils.checkFileExistence(mergeHeadPath)) {
-                // 如果存在，读取MERGE_MSG文件的内容  
+                // 如果存在，读取MERGE_MSG文件的内容
                 return await utils.readFileIfExistsAsync(mergeMsgPath);
             }
         } catch (error) {
@@ -95,7 +100,7 @@ class GitvCommit {
 
     async getTreeObj() {
         const idx = await index.read()
-        console.log(JSON.stringify(utils.indexTransform(utils.convertObject(idx)), null, 2));
+        // console.log(JSON.stringify(utils.indexTransform(utils.convertObject(idx)), null, 2));
         return utils.indexTransform(utils.convertObject(idx));
     }
 
@@ -111,6 +116,16 @@ class GitvCommit {
         // 假设这里是异步写入的逻辑
         try {
             const result = await index.writeObjects(treeObject);
+            return result;
+        } catch (error) {
+            console.error("Error:", error);
+            throw error;
+        }
+    }
+
+    async writeCommit(commit) {
+        try {
+            const result = await index.writeObjects(commit);
             return result;
         } catch (error) {
             console.error("Error:", error);

@@ -15,8 +15,9 @@ class GitvInit {
        const gitvDir = path.isAbsolute(this.directoryTarget)? this.directoryTarget : path.join(process.cwd(), this.directoryTarget)
        if (utils.directoryIsGitvRepo(gitvDir))  throw new Error("The directory is already a gitv repository");
        const gitvDefaultConfig = this.getGitvMapper()
+
        utils.writeFilesFromTree(gitvDefaultConfig, gitvDir);  
-       console.log("GitvInit initialized successfully")
+       console.log("GitvInit initialized successfully",gitvDefaultConfig)
     }
 
     getGitvMapper = () => {        

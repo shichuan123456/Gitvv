@@ -1,9 +1,10 @@
 const zlib = require('zlib');
 const util = require('util');
 const fs = require('fs');
+const path = require('path');
 
-const filename = 'C:\\workspace\\myers\\.gitv\\objects\\abc';
-
+const filename = path.join(__dirname,'.gitv','objects','3d','63ded2caa4f4d898c6ced1dd602260b9755a3d');
+console.log('filename===>',filename)
 const dataToCompress = 'Hello, world!';
 const gzip = util.promisify(zlib.gzip);
 const writeFile = util.promisify(fs.writeFile);

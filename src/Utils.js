@@ -141,6 +141,13 @@ class Utils {
         return blobString;
     }
 
+    createGitObject = (content, type) => {
+        const contentLength = Buffer.byteLength(content, 'utf8');
+        const blobHeader = `${type} ${contentLength}\x00`;
+        const blobString = `${blobHeader}${content}`;
+        return blobString;
+    }
+
     async writeToFile(filePath, content) {
         try {
             await fsPromise.writeFile(filePath, content);
@@ -187,7 +194,7 @@ class Utils {
 
     async checkFileExistence(filePath) {
         try {
-            await fs.access(filePath);
+            await fsPromise.access(filePath);
             return true; // 文件存在且可访问  
         } catch (err) {
             if (err.code === 'ENOENT') {
