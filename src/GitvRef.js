@@ -23,7 +23,9 @@ class GitvRef {
         this.headFilePath = path.join(gitvRepoPath, 'HEAD');
         console.log();
     }
-
+    
+    static headFilePath = path.join(utils.getResourcePath(), 'HEAD')
+    
     async localHeads() {
         try {
             // 读取本地分支目录中的所有文件，并返回文件名和内容组成的对象数组  
@@ -104,6 +106,20 @@ class GitvRef {
         }
     }
 
+    async createRefById(branchName, commitId){
+        try {
+            // 创建新的分支文件，并写入commit hash  
+            await fsPromise.writeFile(path.join(this.localBranchesDir, `${branchName}`), commitId.trim(), 'utf8');
+
+            // 方法结束，新分支创建成功  
+            console.log(`新分支 ${branchName} 创建成功`);
+        } catch (error) {
+            // 捕获并处理异常  
+            console.error(`创建分支 ${branchName} 时发生错误:`, error);
+            throw error; // 重新抛出错误，以便上层调用者可以处理  
+        }
+    }
+
     // 异步删除引用（分支）  
     async deleteRef(branchName) {
         try {
@@ -138,9 +154,9 @@ class GitvRef {
         }
     }
 
-    async isHeadDetached() {
+    isHeadDetached() {
         // 读取.git/HEAD文件的内容
-        const headContent = await fsPromise.readFile(this.headFilePath, 'utf8');
+        const headContent = fs.readFileSync(this.headFilePath, 'utf8');
         // 直接返回是否不是以"ref: "开头，表示头指针是否分离  
         return !headContent.startsWith("ref: ");
     }
@@ -188,15 +204,12 @@ class GitvRef {
 // 异步方法用于获取指定分支的哈希值
 // 参数branch为要获取哈希值的分支，默认为'HEAD'
 
-async getBranchHash(branch = 'HEAD') {
-    let refPath = `${this.headFilePath}`;
-    let headContent;
-    
+ getBranchHash(filePath) {
     try {
-        // 尝试读取HEAD文件的内容
-        headContent = await fs.promises.readFile(refPath, 'utf8');
-        headContent = headContent.trim();
-        
+        const headContent = fs.readFileSync(filePath, 'utf8');
+        // console.log('Reading file:', filePath);
+        // console.log('Content:', headContent);
+
         // 检查HEAD是否直接是一个合法的hash值
         if (/^[0-9a-f]{40}$/.test(headContent)) {
             return headContent; // 返回哈希值字符串
@@ -205,14 +218,16 @@ async getBranchHash(branch = 'HEAD') {
         // 如果HEAD是一个符号引用（以'ref: '开头），解析出实际的分支引用路径并读取
         if (headContent.startsWith('ref: ')) {
             const headContentList = headContent.split('/');
-            refPath = `${this.localBranchesDir}/${headContentList[headContentList.length - 1]}`; // 移除'ref: '前缀
-            headContent = await fs.promises.readFile(refPath, 'utf8');
-            return headContent.trim(); // 返回哈希值字符串
+            const newRefPath = `${this.localBranchesDir}/${headContentList[headContentList.length - 1]}`.trim(); // 移除'ref: '前缀
+            return this.getBranchHash(newRefPath) // 返回哈希值字符串
         } else {
             throw new Error('Unexpected format in .git/HEAD');
         }
+
     } catch (error) {
         if (error.code === 'ENOENT') {
+            // console.log(error.message)
+            return undefined
             throw new Error('Git repository not found or invalid branch provided');
         } else {
             throw error;

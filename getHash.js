@@ -1,42 +1,26 @@
-const fs = require('fs').promises;
+const fs = require('fs');
+const path = require('path');
 
-async function getBranchHash(branch = 'HEAD') {
-    let refPath = `.gitv/${branch}`;
-    let headContent;
+// 递归读取文件内容
+function readRefFile(filePath) {
+    const content = fs.readFileSync(filePath, 'utf8').trim();
+    console.log('Reading file:', filePath);
+    console.log('Content:', content);
 
-    try {
-        // 尝试读取HEAD的内容
-        headContent = await fs.readFile(refPath, 'utf8');
-        headContent = headContent.trim();
-
-        // 检查HEAD是否直接是一个合法的hash值
-        if (/^[0-9a-f]{40}$/.test(headContent)) {
-            return headContent;
-        }
-        
-        // 如果HEAD是一个符号引用（以'ref: '开头），解析出实际的分支引用路径并读取
-        if (headContent.startsWith('ref: ')) {
-            refPath = `.gitv/${headContent.substring(5)}`; // 移除'ref: '前缀
-            headContent = await fs.readFile(refPath, 'utf8');
-            return headContent.trim();
-        } else {
-            throw new Error('Unexpected format in .git/HEAD');
-        }
-    } catch (error) {
-        console.log('=====>errror',error)
-        if (error.code === 'ENOENT') {
-            throw new Error('Git repository not found or invalid branch provided');
-        } else {
-            throw error;
-        }
+    // 如果内容为hash值，则直接返回
+    if (content.match(/^[0-9a-f]{40}$/)) {
+        console.log('Hash value found:', content);
+        return content;
     }
+
+    const contentList = content.split('ref: ')
+    const p=contentList[contentList.length-1]
+    // 如果内容为引用，则继续读取引用对应的文件内容
+    const refPath = path.join('.gitv/', p);
+    return readRefFile(refPath);
 }
 
-// 使用方法
-getBranchHash()
-    .then(hash => {
-        console.log(`The hash for the current branch is: ${hash}`);
-    })
-    .catch(error => {
-        console.error(error.message);
-    });
+// 读取HEAD文件内容
+const headFilePath = path.join('.gitv/', 'HEAD');
+const result = readRefFile(headFilePath);
+console.log('Final result:', result);

@@ -1,10 +1,12 @@
 const utils = require("./Utils")
 const index = require("./GitvIndex")
 const gitvRef = require("./GitvRef")
-const fs = require('fs').promises;
+const FS = require('fs');
+const fs = FS.promises
 const path = require('path');
 const refs = new gitvRef()
-const Commit = require('./Commit')
+const Commit = require('./Commit');
+
 class GitvCommit {
     constructor({
         message
@@ -18,27 +20,49 @@ class GitvCommit {
             if (!utils.isInGitvRepo()) throw new Error("not a Gitv repository");
             // 不能是裸仓库
             if (utils.getRepositoryType() === "bare") throw new Error("this operation must be run in a Gitv work tree");
+            // 暂存区的内容
             const idxTree = await this.getTreeObj()
+            // 生成tree hash
             const treeHash = await this.writeTree(idxTree)
-            // TODO
-            const headNameOrDesc = refs.isHeadDetached() ? "detached HEAD" : refs.headBranchName();
-            const headHash = await this.getCommitTreeHash();
-            if (headHash !== undefined &&
-                treeHash === headHash) {
-                throw new Error("# On " + headNameOrDesc + "\nnothing to commit, working directory clean");
-            } else {
+            let headNameOrDesc
+
+            if(refs.isHeadDetached()) {
+               headNameOrDesc= "detached HEAD"
+            }else {
+                const headContent = FS.readFileSync(gitvRef.headFilePath, 'utf8');
+                const headContentList = headContent.split('/');
+                headNameOrDesc = (headContentList[headContentList.length - 1]).trim();
+            }
+            const commit = new Commit();
+            const currentCommitId = refs.getBranchHash(gitvRef.headFilePath);
+            const headHash = commit.readCommit(currentCommitId);
+
+            /**
+             * 1. treeHash->123 headHash->ref: refs/heads/main -> heads下没有main return undefined
+             *    生成commit -> tree 123，创建main内容为刚生成的commit id=010
+             * 2. treeHash->456 headHash->ref: refs/heads/main -> 010 -> tree 123
+             *    456 !== 123，生成commit -> tree 456 ，id=020
+             * 3. treeHash->456 headHash->ref: refs/heads/main -> 020 -> tree 456
+             *    456 === 456 没有可变更的内容，不需要commit
+             * */ 
+
+            if(treeHash === headHash) {
+                // 没有任何变更，不需要提交
+                console.log(`On branch ${headNameOrDesc}`)
+                console.log('nothing to commit, working tree clean')
+            }else {
                 const msg = await this.getCommitMsg();
-                // var commitHash = objects.writeCommit(treeHash, msg, refs.commitParentHashes());
-                // var commitHash = objects.writeCommit(treeHash, msg, headHash);
-                // gitlet.update_ref("HEAD", commitHash);
-                const commit = new Commit(treeHash, msg);
-                const commitObject = commit.commitObject();
+                const commitObject = commit.commitObject(treeHash, msg);
                 const commitHash = await this.writeCommit(commitObject)
-                console.log("[" + headNameOrDesc + " " + headHash + "] " + msg, '====>>>', commitHash)
+                console.log("[" + headNameOrDesc + " " + commitHash.slice(0,7) + "] " + msg)
+                
+                // 修改branch的指向为最新的commit id
+                refs.createRefById(headNameOrDesc, commitHash)
+
                 return "[" + headNameOrDesc + " " + headHash + "] " + msg;
             }
         } catch (err) {
-            console.error(err.message);
+            console.error('===>error',err.message);
         }
     }
 
@@ -73,8 +97,8 @@ class GitvCommit {
             path.join(utils.getGivWorkingDirRoot(), ".gitv/HEAD");
         let commitHash = "";
 
-
         const headContent = await fs.readFile(headFilePath, 'utf8');
+        console.log('===>',headFilePath,headContent)
         if (headContent.startsWith('ref: ')) {
             const branchName = headContent.replace('ref: ', '').trim();
             const branchHashPath = utils.getRepositoryType() === "bare" ?
