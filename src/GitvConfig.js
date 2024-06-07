@@ -117,6 +117,7 @@ class GitvConfig {
             core: {
                 repositoryformatversion: 0,
                 filemode: false,
+                // bare字段通过--bare选项指定
                 bare: this.opts.bare ? true : false,
                 logallrefupdates: true,
                 symlinks: false,
@@ -124,13 +125,9 @@ class GitvConfig {
             },
             remote: {
                 origin: {
-                    url: './remote-a',
+                    url: 'http://10.88.88.102:8190/fds-fdsfe-repository.git',
                     fetch: '+refs/heads/*:refs/remotes/origin/*'
-                },
-                "remote-b": {
-                    url: './remote-b',
-                    fetch: '+refs/heads/*:refs/remotes/origin/*'
-                },
+                }
             },
             branch: {
                 master: {

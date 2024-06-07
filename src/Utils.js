@@ -22,7 +22,9 @@ class Utils {
 
     // 获取仓库的类型
     getRepositoryType() {
+        //获取工作区根目录
         const dirRoot = this.getGivWorkingDirRoot()
+        // 指定目录的仓库类型获取，封装init命令时已经实现
         return this.getRepositoryTypeFromDirectory(dirRoot)
     }
 
@@ -43,33 +45,41 @@ class Utils {
         // 检查元数据文件和文件夹是否存在
         return (
             fs.existsSync(headFilePath) &&
-            fs.existsSync(objectsFolderPath) &&
             fs.statSync(objectsFolderPath).isDirectory() &&
             fs.statSync(refsFolderPath).isDirectory()
         );
     }
 
-    writeFilesFromTree = (tree, prefix) => {
-        Object.keys(tree).forEach((name) => {
-            const filePath = path.join(prefix, name); // 拼接文件
-            if (typeof (tree[name]) === "string") { // 判断文件还是目录  
-                const dir = path.dirname(filePath) // 获取文件的目录 如果不存在。创建目录，然后再写入
-                if (!fs.existsSync(dir)) fs.mkdirSync(dir, {
+    async writeFilesFromTree(tree, prefix) {
+        // 遍历树的每一个节点  
+        for (const name of Object.keys(tree)) {
+            const filePath = path.join(prefix, name);
+
+            if (typeof tree[name] === 'string') {
+                // 如果是文件，则创建目录并写入文件  
+                const dir = path.dirname(filePath);
+                await fs.mkdir(dir, {
                     recursive: true
-                })
-                fs.writeFileSync(filePath, tree[name]);
+                }).catch(err => {
+                    // 如果目录已经存在，则忽略错误  
+                    if (err.code !== 'EEXIST') {
+                        throw err;
+                    }
+                });
+                await fs.writeFile(filePath, tree[name]);
             } else {
-                if (!fs.existsSync(filePath)) { // 如果目录是目录的，且不存在，直接创建
-                    fs.mkdirSync(filePath, {
+                // 如果是目录，则递归调用自身  
+                if (!(await fs.pathExists(filePath))) {
+                    await fs.mkdir(filePath, {
                         recursive: true
                     });
                 }
-                this.writeFilesFromTree(tree[name], filePath); // 递归写入，直到所有遍历完成
+                await writeFilesFromTree(tree[name], filePath);
             }
-        });
+        }
     }
 
-    // 命令是否实在Gitv仓库内执行
+    // 命令是否在Gitv仓库内执行
     isInGitvRepo() {
         return this.getGivWorkingDirRoot() !== "";
     }
@@ -85,10 +95,7 @@ class Utils {
     }
 
     isSubdirectory(parentPath, childPath) {
-        // 统一成绝对路径
-        const normalizedChild = path.isAbsolute(childPath) ? childPath : (childPath === '.' ? path.resolve(childPath) : path.join(process.cwd(), childPath))
-        const normalizedParent = path.resolve(parentPath);
-        return normalizedChild.startsWith(normalizedParent);
+        return childPath.startsWith(path.resolve(parentPath));
     }
 
     // 加密方法，使用指定算法对内容进行加密
@@ -103,18 +110,17 @@ class Utils {
 
     collectFiles = async (pathOrFile) => {
         try {
-
-            const stats = await fs.promises.stat(pathOrFile);
+            const stats = await fsPromise.stat(pathOrFile);
             if (!stats.isDirectory()) {
                 // 如果不是目录，直接返回文件路径
                 return [pathOrFile];
             }
 
             // 递归搜集文件
-            const files = await fs.promises.readdir(pathOrFile);
+            const files = await fsPromise.readdir(pathOrFile);
             const fileList = await Promise.all(files.map(async (file) => {
                 const filePath = path.join(pathOrFile, file);
-                const fileStats = await fs.promises.stat(filePath);
+                const fileStats = await fsPromise.stat(filePath);
                 if (fileStats.isDirectory()) {
                     // 如果是目录，递归搜集子目录中的文件
                     return this.collectFiles(filePath);
@@ -142,10 +148,12 @@ class Utils {
     }
 
     createGitObject = (content, type) => {
+        // 获取content的字节长度  
         const contentLength = Buffer.byteLength(content, 'utf8');
-        const blobHeader = `${type} ${contentLength}\x00`;
-        const blobString = `${blobHeader}${content}`;
-        return blobString;
+        // 构建对象头，格式为 "类型 长度\x00"  
+        const header = `${type} ${contentLength}\x00`;
+        // 拼接对象头和实际内容，形成完整的Git对象内容  
+        return `${header}${content}`;
     }
 
     async writeToFile(filePath, content) {
@@ -237,7 +245,7 @@ class Utils {
     async readAllFilesInDirectory(dirPath, cb) {
         try {
             // 读取目录中的所有文件和子目录  
-            
+
             const files = await fsPromise.readdir(dirPath, {
                 withFileTypes: true
             });
@@ -256,9 +264,69 @@ class Utils {
                 }
             }
         } catch (err) {
-            console.error(`无法读取目录 ${dirPath}:`, err);
-            throw err; // 重新抛出错误以便调用者可以处理它  
+            throw err;
         }
+    }
+
+    async readObject(hash = "") {
+        let content
+        try {
+            const filePath = path.join(this.getResourcePath(), 'objects', hash.slice(0, 2), '/', hash.slice(2))
+            content = fs.readFileSync(filePath, 'utf8').trim()
+            return content;
+        } catch (error) {
+            return undefined
+        }
+    }
+
+    readLines(str) {
+        return str.split("\n").filter(function (l) {
+            return l !== "";
+        });
+    }
+
+    async fileTree(treeHash, tree) {
+        if (tree === undefined) {
+            return this.fileTree(treeHash, {});
+        }
+        const treeHashContent = await this.readObject(treeHash);
+
+        this.readLines(treeHashContent).forEach(async line => {
+            var lineTokens = line.split(/ /);
+            tree[lineTokens[2]] = lineTokens[0] === "tree" ?
+                await this.fileTree(lineTokens[1], {}) :
+                lineTokens[1];
+        });
+        return tree;
+    }
+
+    flattenNestedTree(tree, obj, prefix) {
+        if (obj === undefined) {
+            return this.flattenNestedTree(tree, {}, "");
+        }
+        Object.keys(tree).forEach(dir => {
+            var filePath = path.join(prefix, dir);
+            if (typeof tree[dir] === "string") {
+                obj[filePath] = tree[dir];
+            } else {
+                this.flattenNestedTree(tree[dir], obj, filePath);
+            }
+        });
+        return obj;
+    }
+
+    setIn(obj, arr) {
+        if (arr.length === 2) {
+            obj[arr[0]] = arr[1];
+        } else if (arr.length > 2) {
+            obj[arr[0]] = obj[arr[0]] || {};
+            util.setIn(obj[arr[0]], arr.slice(1));
+        }
+        return obj;
+    }
+
+    addDesc(heading, lines) {
+        return lines.length > 0 ? [heading, lines] : [];
     }
 }
 

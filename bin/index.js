@@ -22,7 +22,11 @@ program
   // 当执行这个命令的时候会执行的回调函数，可接收命令行的参数
   .action((directoryTarget = "", options) => {
     // 具体的命令逻辑, 其中directoryTarget和options分别是该命令接收的参数和选项
-    gitv.init(directoryTarget, options)
+    try {
+      gitv.init(directoryTarget, options)
+    } catch (error) {
+      console.error(`Failed to initialize Gitv repository in directory '${directoryTarget}'. Error details:`, error);
+    }
   })
 
 program
@@ -33,7 +37,25 @@ program
   // 命令执行时的回调函数，并接收命令行的参数
   .action((pathOrFile) => {
     // 调用Gitv类的add实例方法
-    gitv.add(pathOrFile);
+    try {
+      gitv.add(pathOrFile);
+    } catch (error) {
+      console.error(`Failed to add '${pathOrFile}' to the Gitv repository. Error details:`, error);
+    }
+  })
+
+program
+  .command('rm <fileOrPath>')
+  .description('Remove files from the working directory and the index')
+  .option('--cached', 'Remove files from the index only')
+  .option('-f', 'Force removal of files from both working directory and index')
+  .option('-r', 'Recursively remove files and directories')
+  .action((fileOrPath, options) => {
+    try {
+      gitv.rm(fileOrPath, options)
+    } catch(err) {
+      console.error(`Failed to remove '${fileOrPath}' from the Gitv repository. Error details:`, err);
+    }
   })
 
 program
@@ -57,35 +79,51 @@ program
   .option('-r, --remote', 'List all remote branches')
   .option('-v, --verbose', 'Be verbose and show commit details along with branch names')
   .option('-a, --all', 'List all branches, both local and remote')
-  .option('-d, --delete', 'Delete an existing branch (must be merged or force with -D)')
-  .option('-m, --move', 'Rename a branch')
+  .option('-D, --delete', 'Delete an existing branch (must be merged or force with -D)') //TODO
+  .option('-m, --move <newBranch>', 'Rename a branch')
   .action((branchName, options) => {
-    // 调用branch方法，下面会进行模块的功能模块添加 
-    gitv.branch(branchName, options);
+    try{
+      gitv.branch(branchName, options);
+    } catch(err) {
+      console.error(`Failed to create or modify the branch '${branchName}' in the Gitv repository. Error details:`, err);
+    }
+    
   });
 
-program  
-  .command('remote [url]')  
-  .description('Manage remote repositories')  
-  .option('-v, --verbose', 'Be verbose and show detailed information')  
-  .option('--add <name> <url>', 'Add a new remote repository')  
-  .option('--remove <name>', 'Remove an existing remote repository')  
-  .option('--set-url <name> <url>', 'Change the URL of an existing remote repository')  
-  .option('--rename <oldName> <newName>', 'Rename an existing remote repository')  
-  .action((url, options) => { 
+program
+  .command('remote [url]')
+  .description('Manage remote repositories')
+  .option('-v, --verbose', 'Be verbose and show detailed information')
+  .option('--add <name> <url>', 'Add a new remote repository')
+  .option('--remove <name>', 'Remove an existing remote repository')
+  .option('--set-url <name> <url>', 'Change the URL of an existing remote repository')
+  .option('--rename <oldName> <newName>', 'Rename an existing remote repository')
+  .action((url, options) => {
     gitv.remote(url, options); // 这里应该打印出包含所有选项和参数的对象
   });
 
-  // 定义 gitv log 命令  
-program  
-.command('log')  
-.description('Show commit logs')  
-.option('-n, --number <number>', 'Number of commits to show', parseInt) // 将输入的字符串转换为整数  
-.option('--oneline', 'Show each commit on a single line')  
-.option('--graph', 'Draw a text-based graph of the commit history')  
-.action((options) => {   
-  gitv.log(options); 
-});  
+// 定义 gitv log 命令  
+program
+  .command('log')
+  .description('Show commit logs')
+  .option('-n, --number <number>', 'Number of commits to show', parseInt) // 将输入的字符串转换为整数  
+  .option('--oneline', 'Show each commit on a single line')
+  .option('--graph', 'Draw a text-based graph of the commit history')
+  .action((options) => {
+    gitv.log(options);
+  });
+
+program
+  .command('merge')
+  .description('Merge a branch into the current branch')
+  .argument('<branch>', 'The branch to merge into the current branch')
+  .action((branch) => {
+    try {
+      gitv.merge(branch)
+    } catch (error) {
+      console.error(`Error merging ${branch}:`, error);
+    }
+  });
 
 program
   .command('clone [remote_repository_url] [local_directory]')
@@ -93,5 +131,13 @@ program
   .action((remoteRepositoryUrl, localDirectory) => {
     gitv.clone(remotePath, targetPath)
   })
+
+// 定义 gitv status 命令
+program
+  .command('status')
+  .description('Show the status of the repository')
+  .action(() => {
+    gitv.status();
+  });
 
 program.parse()

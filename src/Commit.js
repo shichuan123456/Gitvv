@@ -1,6 +1,9 @@
 const path = require('path')
 const fs = require('fs')
-const { createGitObject,sha1 } = require('./Utils');
+const {
+    createGitObject,
+    sha1
+} = require('./Utils');
 const utils = require("./Utils");
 const GitvConfig = require('./GitvConfig')
 const GitvRef = require('./GitvRef');
@@ -10,14 +13,22 @@ const index = require("./GitvIndex");
 const gitvConfig = new GitvConfig()
 class Commit {
     constructor() {}
+    static isAncestor(descendentHash, ancestorHash) {
+        return this.ancestors(descendentHash).indexOf(ancestorHash) !== -1;
+    }
 
+    ancestors(commitHash) {
+        var parents = this.parentHashes(this.readCommit(commitHash));
+        return util.flatten(parents.concat(parents.map(objects.ancestors)));
+    }
+    
     getParentSha() {
         const parentHash = ref.getBranchHash(GitvRef.headFilePath)
         return parentHash
     }
+
     getAuthor() {
         const conf = gitvConfig.read()
-        
         return conf.user
     }
 
@@ -28,8 +39,8 @@ class Commit {
         const commitLines = [
             `tree ${treeSha}`,
             parentSha ? `parent ${parentSha}` : '',
-            `author ${author.name} <${author.email}> ${commitTime} ${Math.abs(new Date().getTimezoneOffset() / 60)}00`,
-            `committer ${author.name} <${author.email}> ${commitTime} ${Math.abs(new Date().getTimezoneOffset() / 60)}00`,
+            `author ${author?.name} <${author?.email}> ${commitTime} ${Math.abs(new Date().getTimezoneOffset() / 60)}00`,
+            `committer ${author?.name} <${author?.email}> ${commitTime} ${Math.abs(new Date().getTimezoneOffset() / 60)}00`,
             `date ${(new Date()).toISOString()}`,
             '',
             message
@@ -41,7 +52,7 @@ class Commit {
     readCommit(commitId) {
         let content
         try {
-            const filePath = path.join(utils.getResourcePath(),'objects',commitId.slice(0,2),'/',commitId.slice(2))
+            const filePath = path.join(utils.getResourcePath(), 'objects', commitId.slice(0, 2), '/', commitId.slice(2))
             content = fs.readFileSync(filePath, 'utf8').trim()
             const treeHashRegex = /tree (\w+)/;
             const match = content.match(treeHashRegex);
@@ -59,14 +70,14 @@ class Commit {
         }
     }
 
-    getAllCommits(n=0) {
+    getAllCommits(n = 0) {
         const len = n === 0 ? Number.MAX_VALUE : n
         let i = 0;
         const commits = [];
         let parentSha = this.getParentSha();
         while (parentSha && i < len) {
             i++
-            const filePath = path.join(utils.getResourcePath(),'objects',parentSha.slice(0,2),'/',parentSha.slice(2))
+            const filePath = path.join(utils.getResourcePath(), 'objects', parentSha.slice(0, 2), '/', parentSha.slice(2))
             const commitContent = fs.readFileSync(filePath, 'utf8').trim()
             const commitData = this.parseCommitObject(commitContent);
             commits.push(commitData);
@@ -93,7 +104,7 @@ class Commit {
                 author = line.split(' ').slice(1, -2).join(' ');
             } else if (line.startsWith('committer')) {
                 committer = line.split(' ').slice(1, -2).join(' ');
-            }else if (line.startsWith('date')) {
+            } else if (line.startsWith('date')) {
                 date = line.split(' ').slice(1).join(' ');
             } else if (line === '') {
                 // Skip empty line
@@ -102,9 +113,16 @@ class Commit {
             }
         }
 
-        return { treeSha, parentSha, author, message,committer,date };
+        return {
+            treeSha,
+            parentSha,
+            author,
+            message,
+            committer,
+            date
+        };
     }
-
 }
+
 
 module.exports = Commit;

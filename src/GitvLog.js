@@ -17,7 +17,6 @@ class GitvLog {
         const commits = this.getCommits(n)
 
         this.printLogs(commits, this.options.oneline)
-
     }
 
     getCommits(n = 0) {

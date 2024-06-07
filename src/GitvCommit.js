@@ -97,8 +97,8 @@ class GitvCommit {
             path.join(utils.getGivWorkingDirRoot(), ".gitv/HEAD");
         let commitHash = "";
 
-        const headContent = await fs.readFile(headFilePath, 'utf8');
         console.log('===>',headFilePath,headContent)
+        const headContent = await fs.readFile(headFilePath, 'utf8');
         if (headContent.startsWith('ref: ')) {
             const branchName = headContent.replace('ref: ', '').trim();
             const branchHashPath = utils.getRepositoryType() === "bare" ?

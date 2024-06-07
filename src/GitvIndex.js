@@ -1,19 +1,14 @@
 const fs = require("fs")
 const readline = require('readline');
-const writeFileAsync = require('util').promisify(fs.writeFile);
+const util = require('util');
+const writeFileAsync = util.promisify(fs.writeFile);
 const utils = require("./Utils")
 const path = require("path")
 const zlib = require('zlib');
-const util = require('util');
 const gzip = util.promisify(zlib.gzip);
 class GitvIndex {
     constructor() {
-        // 获取 Gitv 仓库的根路径
-        const gitvRepoPath = utils.getGivWorkingDirRoot();
-        // 确定索引文件的路径
-        this.indexPath = utils.getRepositoryType() === "bare"
-         ? path.join(gitvRepoPath, "index") 
-         : path.join(gitvRepoPath, ".gitv", "index") 
+        this.indexPath = utils.getResourcePath('HEAD');
     }
     // 读取 index 文件，返回一个包含 index 对象的 Promise
     async read() {
@@ -45,20 +40,18 @@ class GitvIndex {
     async deleteAndWrite(filePath) {
         try {
             // 异步读取当前 index 文件的内容
-            const idx = await this.read();
-            // 遍历该文件的所有 stage，进行清除
+            const idx = await index.read();
+            // 遍历该文件的所有 stage，进行清除, stage number和合并的冲突有关我们后续会做深入的讲解
             [0, 1, 2, 3].forEach(stage => {
-                delete idx[filePath + "," + stage];
+                delete idx[index.key(filePath, stage)];
             });
-
-            // 异步进行写入
-            await this.write(idx);
+            // 异步进行写入，上面已经封装
+            await index.write(idx);
         } catch (err) {
-            console.error("Error deleting and writing index file:", err);
-            // 根据实际情况处理错误，例如抛出异常或者返回错误信息
             throw err;
         }
     }
+
     // 写入整个index对象
     async write(index) {
         try {
@@ -67,74 +60,67 @@ class GitvIndex {
                 .map(([key, value]) => `${key.split(",")[0]} ${key.split(",")[1]} ${value}`)
                 .join("\n") + "\n";
 
-            
-             // 检查目录是否存在，如果不存在则创建目录
-            // await fs.promises.mkdir(path.dirname(this.indexPath), { recursive: true });
             // 异步写入索引文件
             await writeFileAsync(this.indexPath, indexStr);
-            console.log("Index file has been successfully written."); // 可选的成功日志
         } catch (err) {
-            console.error("Error writing index file:", err); // 错误日志
-            throw err; // 抛出异常以便调用者处理
+            throw err;
         }
     }
 
     async updateIndex(filePath) {
-        const isOnDisk = fs.existsSync(filePath);
-        if (!isOnDisk) return;
-        // 获取文件的绝对路径
-        // const absolutePath = path.join(utils.getGivWorkingDirRoot(), filePath || "");
-        // 实现add的核心写入功能
-        // await this. deleteAndWrite(filePath);
-        // 写入objects对象和index文件
-        await this.writeObjectsAndIndex(filePath, 0, fs.readFileSync(filePath, "utf-8"));
-        return "\n";
-    }
-
-    async writeObjectsAndIndex(filePath, stage, content) {   // TODO
-        var idx = await this.read();
-        // console.log(idx, "idx--=-=-=-=");
-   
-        // const hashContent = 
-        // files.write(nodePath.join(files.gitletPath(), "objects", util.hash(str)), str);
-        // utils.sha1(str);
-        idx[filePath + "," + stage] = await this.writeObjects(utils.createGitBlob(content));
-        // idx[filePath + "," + stage] = objects.write(content);
-        await this.write(idx);
-    }
-
-    async  writeObjects(content) {
-        const objectsDir = utils.getRepositoryType() === "bare" 
-        ? path.join(utils.getGivWorkingDirRoot(), "objects")
-        : path.join(utils.getGivWorkingDirRoot(), ".gitv/objects");
-
-        const blob = utils.sha1(content)
-        // 提取文件夹名称
-        const folderName = blob.substring(0, 2)
-        // 构建文件夹路径
-        const folderPath = path.join(objectsDir, folderName)
-    
         try {
-            // 检查文件夹是否存在
-            await fs.promises.access(folderPath)
+            const isOnDisk = fs.existsSync(filePath);
+            if (!isOnDisk) return;
+            await this.writeObjectsAndIndex(filePath, 0, fs.readFileSync(filePath, "utf-8"));
+            return "\n";
         } catch (err) {
-            // 如果文件夹不存在，则创建文件夹
-            await fs.promises.mkdir(folderPath)
+            throw err;
         }
-    
-        // 构建文件路径
-        const filePath = path.join(folderPath, blob.substring(2))
+    }
+
+    async writeObjectsAndIndex(filePath, stage, content) {
+        try {
+            var idx = await this.read();
+            // 我们会先通过`writeObjects`将文件内容写入objects，然后返回文件的hash，再更新index文件
+            idx[filePath + "," + stage] = await this.writeObjects(utils.createGitBlob(content));
+            await this.write(idx);
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async filteredFiles() {
         
-        // 写入文件内容
-        // await writeFileAsync(filePath, await gzip(content))
-        await writeFileAsync(filePath, content)
-        return blob
+    }
+
+    async writeObjects(content) {
+        try {
+            const objectsDir = utils.getResourcePath('objects');
+            const blob = utils.sha1(content)
+            // 提取文件夹名称
+            const folderName = blob.substring(0, 2)
+            // 构建文件夹路径
+            const folderPath = path.join(objectsDir, folderName)
+
+            try {
+                // 检查文件夹是否存在
+                await fs.promises.access(folderPath)
+            } catch (err) {
+                // 如果文件夹不存在，则创建文件夹
+                await fs.promises.mkdir(folderPath)
+            }
+
+            // 构建文件路径
+            const filePath = path.join(folderPath, blob.substring(2))
+
+            // 写入文件内容
+            // await writeFileAsync(filePath, await gzip(content))
+            await writeFileAsync(filePath, content)
+            return blob
+        } catch (err) {
+            throw err
+        }
     }
 }
 
 module.exports = new GitvIndex();
-
-// {
-//     'C:\\workspace\\myers\\a.sh,0': '92796ceae2c3120351b66e954f59c4a35711529e'，
-//     'C:\\workspace\\myers\\b.sh,0': '92796cfdfdsfdfdsfdsf1324564561231321529e'
-// }
