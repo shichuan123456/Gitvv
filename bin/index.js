@@ -53,7 +53,7 @@ program
   .action((fileOrPath, options) => {
     try {
       gitv.rm(fileOrPath, options)
-    } catch(err) {
+    } catch (err) {
       console.error(`Failed to remove '${fileOrPath}' from the Gitv repository. Error details:`, err);
     }
   })
@@ -66,11 +66,15 @@ program
   .description('Record changes to the repository')
   .action((options) => {
     // 检查 -m 参数是否已提供并且不为空  
-    if (!options.message || options.message.trim() === '') {
-      console.error('Error: Commit message is required and cannot be empty.');
-      process.exit(1); // 退出程序并返回错误码 1  
+    try {
+      if (!options.message || options.message.trim() === '') {
+        console.error('Error: Commit message is required and cannot be empty.');
+        process.exit(1); // 退出程序并返回错误码 1  
+      }
+      gitv.commit(options);
+    } catch (err) {
+      console.error(`Failed to commit changes to the Gitv repository. Error details:`, err);
     }
-    gitv.commit(options);
   })
 
 program
@@ -82,12 +86,12 @@ program
   .option('-D, --delete', 'Delete an existing branch (must be merged or force with -D)') //TODO
   .option('-m, --move <newBranch>', 'Rename a branch')
   .action((branchName, options) => {
-    try{
+    try {
       gitv.branch(branchName, options);
-    } catch(err) {
+    } catch (err) {
       console.error(`Failed to create or modify the branch '${branchName}' in the Gitv repository. Error details:`, err);
     }
-    
+
   });
 
 program

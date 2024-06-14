@@ -8,7 +8,7 @@ const zlib = require('zlib');
 const gzip = util.promisify(zlib.gzip);
 class GitvIndex {
     constructor() {
-        this.indexPath = utils.getResourcePath('HEAD');
+        this.indexPath = utils.getResourcePath('index'); 
     }
     // 读取 index 文件，返回一个包含 index 对象的 Promise
     async read() {
@@ -40,13 +40,13 @@ class GitvIndex {
     async deleteAndWrite(filePath) {
         try {
             // 异步读取当前 index 文件的内容
-            const idx = await index.read();
+            const idx = await this.read();
             // 遍历该文件的所有 stage，进行清除, stage number和合并的冲突有关我们后续会做深入的讲解
             [0, 1, 2, 3].forEach(stage => {
-                delete idx[index.key(filePath, stage)];
+                delete idx[filePath + "," + stage];
             });
             // 异步进行写入，上面已经封装
-            await index.write(idx);
+            await this.write(idx);
         } catch (err) {
             throw err;
         }
@@ -89,8 +89,13 @@ class GitvIndex {
         }
     }
 
-    async filteredFiles() {
-        
+    async filteredFiles(files) {
+        try {
+            const idx = utils.convertObject(await this.read());
+            return files.filter(file => idx.hasOwnProperty(path.relative(utils.getGivWorkingDirRoot(), file.toString())));
+        } catch (err) {
+            throw err;
+        }
     }
 
     async writeObjects(content) {

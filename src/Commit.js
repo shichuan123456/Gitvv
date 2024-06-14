@@ -39,8 +39,8 @@ class Commit {
         const commitLines = [
             `tree ${treeSha}`,
             parentSha ? `parent ${parentSha}` : '',
-            `author ${author?.name} <${author?.email}> ${commitTime} ${Math.abs(new Date().getTimezoneOffset() / 60)}00`,
-            `committer ${author?.name} <${author?.email}> ${commitTime} ${Math.abs(new Date().getTimezoneOffset() / 60)}00`,
+            `author ${author.name} <${author.email}> ${commitTime} ${Math.abs(new Date().getTimezoneOffset() / 60)}00`,
+            `committer ${author.name} <${author.email}> ${commitTime} ${Math.abs(new Date().getTimezoneOffset() / 60)}00`,
             `date ${(new Date()).toISOString()}`,
             '',
             message

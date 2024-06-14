@@ -26,9 +26,9 @@ class GitvCommit {
             const treeHash = await this.writeTree(idxTree)
             let headNameOrDesc
 
-            if(refs.isHeadDetached()) {
-               headNameOrDesc= "detached HEAD"
-            }else {
+            if (refs.isHeadDetached()) {
+                headNameOrDesc = "detached HEAD"
+            } else {
                 const headContent = FS.readFileSync(gitvRef.headFilePath, 'utf8');
                 const headContentList = headContent.split('/');
                 headNameOrDesc = (headContentList[headContentList.length - 1]).trim();
@@ -44,25 +44,25 @@ class GitvCommit {
              *    456 !== 123，生成commit -> tree 456 ，id=020
              * 3. treeHash->456 headHash->ref: refs/heads/main -> 020 -> tree 456
              *    456 === 456 没有可变更的内容，不需要commit
-             * */ 
+             * */
 
-            if(treeHash === headHash) {
+            if (treeHash === headHash) {
                 // 没有任何变更，不需要提交
                 console.log(`On branch ${headNameOrDesc}`)
                 console.log('nothing to commit, working tree clean')
-            }else {
+            } else {
                 const msg = await this.getCommitMsg();
                 const commitObject = commit.commitObject(treeHash, msg);
                 const commitHash = await this.writeCommit(commitObject)
-                console.log("[" + headNameOrDesc + " " + commitHash.slice(0,7) + "] " + msg)
-                
+                console.log("[" + headNameOrDesc + " " + commitHash.slice(0, 7) + "] " + msg)
+
                 // 修改branch的指向为最新的commit id
                 refs.createRefById(headNameOrDesc, commitHash)
 
                 return "[" + headNameOrDesc + " " + headHash + "] " + msg;
             }
         } catch (err) {
-            console.error('===>error',err.message);
+            console.error('===>error', err.message);
         }
     }
 
@@ -97,7 +97,7 @@ class GitvCommit {
             path.join(utils.getGivWorkingDirRoot(), ".gitv/HEAD");
         let commitHash = "";
 
-        console.log('===>',headFilePath,headContent)
+        console.log('===>', headFilePath, headContent)
         const headContent = await fs.readFile(headFilePath, 'utf8');
         if (headContent.startsWith('ref: ')) {
             const branchName = headContent.replace('ref: ', '').trim();
@@ -119,30 +119,45 @@ class GitvCommit {
 
         const commitContent = await fs.readFile(headFilePath, 'utf8');
         return commitContent.split(/\s/)[1];
-
     }
 
     async getTreeObj() {
-        const idx = await index.read()
-        // console.log(JSON.stringify(utils.indexTransform(utils.convertObject(idx)), null, 2));
-        return utils.indexTransform(utils.convertObject(idx));
+        try {
+            const idx = await index.read()
+            return utils.indexTransform(utils.convertObject(idx));
+        } catch (err) {
+            throw err;
+        }
     }
 
+    // 定义一个异步函数 writeTree，它接受一个树对象作为参数  
     async writeTree(tree) {
+        // 使用 Promise.all 并发处理树对象的每个键（即文件名或子目录名）
+        // Object.keys(tree) 获取树对象的所有键，然后 map 遍历它们 
         const treeObjects = await Promise.all(Object.keys(tree).map(async (key) => {
+            // 如果树对象的当前值是一个字符串（表示文件的内容哈希）  
             if (typeof tree[key] === "string") {
+                // 返回一个字符串，格式为 "blob <内容哈希> <文件名>"  
                 return "blob " + tree[key] + " " + key;
             } else {
+                // 如果树对象的当前值是一个对象（表示子目录）  
+                // 递归调用 writeTree 函数，处理这个子目录  
+                // 等待递归调用完成，并获取返回的树对象字符串  
+                // 然后返回一个字符串，格式为 "tree <子目录树对象字符串> <子目录名>"  
+                // 这表示一个树对象，树对象用于表示目录结构  
                 return "tree " + await this.writeTree(tree[key]) + " " + key;
             }
         }));
+
+        // 将处理后的所有树对象字符串用换行符连接成一个完整的树对象字符串   
         const treeObject = treeObjects.join("\n") + "\n";
-        // 假设这里是异步写入的逻辑
         try {
-            const result = await index.writeObjects(treeObject);
+            // 调用 index.writeObjects 方法（这个方法可能是自定义的，用于写入 Git 对象）  
+            // 并传入通过 utils.createGitObject 创建的 "tree" 对象  
+            const result = await index.writeObjects(utils.createGitObject(treeObject, "tree"));
+            // 返回写入操作的结果  
             return result;
         } catch (error) {
-            console.error("Error:", error);
             throw error;
         }
     }
