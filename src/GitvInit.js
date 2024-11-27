@@ -7,42 +7,27 @@ class GitvInit {
     constructor(directoryTarget, options) {
         this.directoryTarget = directoryTarget
         this.options = options
-        this.GitConfig = new GitvConfig(this.options)
+        this.gitvConfig = new GitvConfig(this.options)
     }
 
     async init() {
         try {
-            const gitvDir = this.resolveGitvDirectory(this.directoryTarget);
-            if (utils.directoryIsGitvRepo(gitvDir)) {
-                console.error("The directory is already a gitv repository");
-                return;
-            }
+            const gitvPath = utilts.resolveGitvDirectory(this.directoryTarget);
+            if (utils.isDirectoryGitvRepo(gitvPath)) throw new Error("The directory is already a gitv repository");
+            // 生成Gitv中的默认配置映射JS对象
             const gitvDefaultConfig = this.getGitvMapper()
-
-            await utils.writeFilesFromTree(gitvDefaultConfig, gitvDir);
+            // 生成目录、文件、完成初始化
+            await utils.writeFilesFromTree(gitvDefaultConfig, gitvPath);
         } catch (err) {
             throw err
         }
     }
 
-    // 如果目录目标已经是绝对路径，则直接返回；否则，将其与当前工作目录拼接后返回  
-    resolveGitvDirectory(directoryTarget) { 
-        if (typeof directoryTarget !== 'string' || directoryTarget === '') {
-            throw new Error('Invalid directory target: must be a non-empty string');
-        }
-
-        if (path.isAbsolute(directoryTarget)) {
-            // 如果是绝对路径，则直接返回  
-            return directoryTarget;
-        } else {
-            // 如果不是绝对路径，则与当前工作目录拼接  
-            return path.join(process.cwd(), directoryTarget);
-        }
-    }
-
     getGitvMapper = () => {
         const gitvInitConfig = {
+            // 默认当前仓库是master分支（后面课程会详细介绍）
             HEAD: "ref: refs/heads/master\n",
+            // config文件
             config: this.GitConfig.objToGitConfigString(this.GitConfig.generateDefaultConfig()),
             info: {
                 exclude: `

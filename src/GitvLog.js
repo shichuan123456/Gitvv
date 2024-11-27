@@ -13,7 +13,7 @@ class GitvLog {
         // 不能是裸仓库
         if (utils.getRepositoryType() === "bare") throw new Error("this operation must be run in a Gitv work tree");
 
-        const n = this.options.number || 0
+        const n = this.options.number || Number.MAX_SAFE_INTEGER
         const commits = this.getCommits(n)
 
         this.printLogs(commits, this.options.oneline)
@@ -21,22 +21,6 @@ class GitvLog {
 
     getCommits(n = 0) {
         return commit.getAllCommits(n)
-    }
-
-    formattedDate(dateString) {
-        const date = new Date(dateString);
-
-        const options = {
-            weekday: 'short',
-            month: 'short',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            year: 'numeric',
-            timeZoneName: 'short'
-        };
-        return date.toLocaleString('en-US', options);
     }
 
     printLogs(commits, oneline=false) {
@@ -52,7 +36,7 @@ class GitvLog {
             }else {
                 console.log(colors.FgYellow, 'commit', commit.treeSha);
                 console.log(colors.FgWhite, 'Author: ', commit.author);
-                console.log(colors.FgWhite, 'Date: ', this.formattedDate(commit.date));
+                console.log(colors.FgWhite, 'Date: ', utils.formattedDate(commit.date));
                 console.log();
                 console.log(colors.FgWhite, '    ', commit.message);
                 console.log();

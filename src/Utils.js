@@ -4,18 +4,19 @@ const path = require("path")
 const {
     createHash
 } = require("crypto");
+const Commit = require("./Commit");
 class Utils {
     constructor() {}
     // 判断目录是否是一个 Gitv 仓库  
-    directoryIsGitvRepo(dir) {
-        return this.getRepositoryTypeFromDirectory(dir) !== "";
+    IsDirectoryGitvRepo(dir) {
+        return this.getGitvRepoType(dir) !== "";
     }
     // 检查目录下是否存在 Gitv 仓库的必要元数据文件和文件夹
-    getRepositoryTypeFromDirectory(dir) {
+    getGitvRepoType(dir) {
         if (!fs.existsSync(dir)) return;
         // 检查是否是裸仓库或一般仓库
-        const isBareGitvRepository = this.checkRepositoryMetadata(dir, "bare");
-        const isGeneralGitvRepository = this.checkRepositoryMetadata(dir, "general");
+        const isBareGitvRepository = this.isExistGitvRepoMetadata(dir, "bare");
+        const isGeneralGitvRepository = this.isExistGitvRepoMetadata(dir, "general");
         // "" , "bare", "general"
         return isBareGitvRepository ? "bare" : (isGeneralGitvRepository ? "general" : "");
     }
@@ -25,7 +26,7 @@ class Utils {
         //获取工作区根目录
         const dirRoot = this.getGivWorkingDirRoot()
         // 指定目录的仓库类型获取，封装init命令时已经实现
-        return this.getRepositoryTypeFromDirectory(dirRoot)
+        return this.getGitvRepoType(dirRoot)
     }
 
     // 获取仓库中文件的具体路径
@@ -36,46 +37,56 @@ class Utils {
     }
 
     // 检查 Gitv 仓库的元数据是否存在
-    checkRepositoryMetadata(dir, type) {
-        // 构建元数据文件和文件夹的路径，HEAD文件、objects文件夹和refs文件夹
-        const headFilePath = path.join(dir, type === "bare" ? "HEAD" : ".gitv/HEAD");
-        const objectsFolderPath = path.join(dir, type === "bare" ? "objects" : ".gitv/objects");
-        const refsFolderPath = path.join(dir, type === "bare" ? "refs" : ".gitv/refs");
-
-        // 检查元数据文件和文件夹是否存在
-        return (
-            fs.existsSync(headFilePath) &&
-            fs.statSync(objectsFolderPath).isDirectory() &&
-            fs.statSync(refsFolderPath).isDirectory()
-        );
+    isExistGitvRepoMetadata(dir, type) {  
+        // 构建元数据文件和文件夹的路径  
+        const baseDir = type === "bare" ? dir : path.join(dir, '.gitv');  
+        const headFilePath = path.join(baseDir, 'HEAD');  
+        const objectsFolderPath = path.join(baseDir, 'objects');  
+        const refsFolderPath = path.join(baseDir, 'refs');  
+      
+        // 检查元数据文件和文件夹是否存在  
+        try {  
+            return (  
+                fs.existsSync(headFilePath) &&  
+                fs.statSync(objectsFolderPath).isDirectory() &&  
+                fs.statSync(refsFolderPath).isDirectory()  
+            );  
+        } catch (error) {  
+            // 如果发生错误（例如目录不存在），则返回false  
+            return false;  
+        }  
     }
 
     async writeFilesFromTree(tree, prefix) {
-        // 遍历树的每一个节点  
-        for (const name of Object.keys(tree)) {
-            const filePath = path.join(prefix, name);
+        try {
+            // 遍历树的每一个节点  
+            for (const name of Object.keys(tree)) {
+                const filePath = path.join(prefix, name);
 
-            if (typeof tree[name] === 'string') {
-                // 如果是文件，则创建目录并写入文件  
-                const dir = path.dirname(filePath);
-                await fs.mkdir(dir, {
-                    recursive: true
-                }).catch(err => {
-                    // 如果目录已经存在，则忽略错误  
-                    if (err.code !== 'EEXIST') {
-                        throw err;
-                    }
-                });
-                await fs.writeFile(filePath, tree[name]);
-            } else {
-                // 如果是目录，则递归调用自身  
-                if (!(await fs.pathExists(filePath))) {
-                    await fs.mkdir(filePath, {
+                if (typeof tree[name] === 'string') {
+                    // 如果是文件，则创建目录并写入文件  
+                    const dir = path.dirname(filePath);
+                    await fs.mkdir(dir, {
                         recursive: true
+                    }).catch(err => {
+                        // 如果目录已经存在，则忽略错误  
+                        if (err.code !== 'EEXIST') {
+                            throw err;
+                        }
                     });
+                    await fs.writeFile(filePath, tree[name]);
+                } else {
+                    // 如果是目录，则递归调用自身  
+                    if (!(await fs.pathExists(filePath))) {
+                        await fs.mkdir(filePath, {
+                            recursive: true
+                        });
+                    }
+                    await writeFilesFromTree(tree[name], filePath);
                 }
-                await writeFilesFromTree(tree[name], filePath);
             }
+        } catch (err) {
+            throw err;
         }
     }
 
@@ -84,14 +95,30 @@ class Utils {
         return this.getGivWorkingDirRoot() !== "";
     }
 
+    // 如果目录目标已经是绝对路径，则直接返回；否则，将其与当前工作目录拼接后返回  
+    resolveGitvRepoPath(directoryTarget) {
+        if (typeof directoryTarget !== 'string' || directoryTarget === '') {
+            throw new Error('Invalid directory target: must be a non-empty string');
+        }
+
+        if (path.isAbsolute(directoryTarget)) {
+            // 如果是绝对路径，则直接返回  
+            return directoryTarget;
+        } else {
+            // 如果不是绝对路径，则与当前工作目录拼接  
+            // process.cwd()是当前执行命令的时候文件夹所在的路径
+            return path.join(process.cwd(), directoryTarget);
+        }
+    }
+
     // 获取Gitv仓库的工作区的根目录
     getGivWorkingDirRoot() {
         let dir = process.cwd(); // 当前命令执行目录
         // 从dir开始依次向上查找直到找到或到目录的顶层
-        while (!this.directoryIsGitvRepo(dir) && path.parse(dir).root !== path.resolve(dir)) {
+        while (!this.IsDirectoryGitvRepo(dir) && path.parse(dir).root !== path.resolve(dir)) {
             dir = path.join(dir, ".."); // 获取上一级目录
         }
-        return this.directoryIsGitvRepo(dir) ? dir : "";
+        return this.IsDirectoryGitvRepo(dir) ? dir : "";
     }
 
     isSubdirectory(parentPath, childPath) {
@@ -133,8 +160,7 @@ class Utils {
             // 展平嵌套的数组结构
             return fileList.flat();
         } catch (err) {
-            console.error("Error collecting files:", err);
-            return [];
+            return err;
         }
     }
     // SHA-1 加密方法，对内容进行 SHA-1 加密
@@ -286,18 +312,22 @@ class Utils {
     }
 
     async fileTree(treeHash, tree) {
-        if (tree === undefined) {
-            return this.fileTree(treeHash, {});
-        }
-        const treeHashContent = await this.readObject(treeHash);
+        try {
+            if (tree === undefined) {
+                return this.fileTree(treeHash, {});
+            }
+            const treeHashContent = path.join(this.getResourcePath('objects'), treeHash.slice(0, 2), '/', treeHash.slice(2));
 
-        this.readLines(treeHashContent).forEach(async line => {
-            var lineTokens = line.split(/ /);
-            tree[lineTokens[2]] = lineTokens[0] === "tree" ?
-                await this.fileTree(lineTokens[1], {}) :
-                lineTokens[1];
-        });
-        return tree;
+            this.readLines(treeHashContent).forEach(async line => {
+                var lineTokens = line.split(/ /);
+                tree[lineTokens[2]] = lineTokens[0] === "tree" ?
+                    await this.fileTree(lineTokens[1], {}) :
+                    lineTokens[1];
+            });
+            return tree;
+        } catch (err) {
+            throw err;
+        }
     }
 
     flattenNestedTree(tree, obj, prefix) {
@@ -328,7 +358,26 @@ class Utils {
     addDesc(heading, lines) {
         return lines.length > 0 ? [heading, lines] : [];
     }
+
+    formattedDate(dateString) {
+        const date = new Date(dateString);
+
+        const options = {
+            weekday: 'short',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            year: 'numeric',
+            timeZoneName: 'short'
+        };
+        return date.toLocaleString('en-US', options);
+    }
 }
 
 
 module.exports = new Utils()
+
+
+

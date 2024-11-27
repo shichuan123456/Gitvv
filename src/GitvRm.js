@@ -8,12 +8,11 @@ const index = require('./GitvIndex')
 class GitvRm {
     constructor(pathOrfile, options) {
         this.pathOrfile = pathOrfile
-        this.absolutePath = path.isAbsolute(this.pathOrfile) ? this.pathOrfile : (this.pathOrfile === '.' ? path.resolve(this.pathOrfile) : path.join(process.cwd(), this.pathOrfile))
+        this.absolutePath = utils.resolveGitvRepoPath(this.pathOrfile)
         this.options = options
-        this.gitvRepoPath = utils.getGivWorkingDirRoot()
     }
 
-    async gitRm() {
+    async rm() {
         try {
             const {
                 cached,
@@ -28,11 +27,14 @@ class GitvRm {
             }
 
             const stats = await fsPromise.stat(this.absolutePath);
-            if (stats.isDirectory() && !r) {
-                throw new Error(`not removing ${this.absolutePath} recursively without -r`);
+            let files;
+            if (stats.isDirectory()) {
+                if (!r)  throw new Error(`not removing ${this.absolutePath} recursively without -r`);
+                files = await utils.collectFiles(this.absolutePath);
+            } else {
+                files = [this.absolutePath]
             }
 
-            const files = await utils.collectFiles(this.absolutePath);
             if (files.length !== 0 && !cached) {
                 for (const filePath of files) {
                     await fsPromise.unlink(filePath);
@@ -46,7 +48,6 @@ class GitvRm {
             throw err;
         }
     }
-
 }
 
 module.exports = GitvRm;

@@ -24,18 +24,9 @@ class GitvCommit {
             const idxTree = await this.getTreeObj()
             // 生成tree hash
             const treeHash = await this.writeTree(idxTree)
-            let headNameOrDesc
+            const headNameOrDesc = refs.isHeadDetached() ? "detached HEAD" : refs.headBranchName();
 
-            if (refs.isHeadDetached()) {
-                headNameOrDesc = "detached HEAD"
-            } else {
-                const headContent = FS.readFileSync(gitvRef.headFilePath, 'utf8');
-                const headContentList = headContent.split('/');
-                headNameOrDesc = (headContentList[headContentList.length - 1]).trim();
-            }
-            const commit = new Commit();
-            const currentCommitId = refs.getBranchHash(gitvRef.headFilePath);
-            const headHash = commit.readCommit(currentCommitId);
+            const headHash = Commit.parseCommitObjectById(refs.getBranchHash(gitvRef.headFilePath));
 
             /**
              * 1. treeHash->123 headHash->ref: refs/heads/main -> heads下没有main return undefined
@@ -57,12 +48,12 @@ class GitvCommit {
                 console.log("[" + headNameOrDesc + " " + commitHash.slice(0, 7) + "] " + msg)
 
                 // 修改branch的指向为最新的commit id
-                refs.createRefById(headNameOrDesc, commitHash)
+                refs.updateRefByBranchName(headNameOrDesc, commitHash)
 
                 return "[" + headNameOrDesc + " " + headHash + "] " + msg;
             }
         } catch (err) {
-            console.error('===>error', err.message);
+            throw err;
         }
     }
 
@@ -89,36 +80,6 @@ class GitvCommit {
         // 检测文件存在，并读取文件内容  
         // 获取具体路径
         const exists = await checkFileExistence(filePath);
-    }
-
-    async getCommitTreeHash() {
-        const headFilePath = utils.getRepositoryType() === "bare" ?
-            path.join(utils.getGivWorkingDirRoot(), "HEAD") :
-            path.join(utils.getGivWorkingDirRoot(), ".gitv/HEAD");
-        let commitHash = "";
-
-        console.log('===>', headFilePath, headContent)
-        const headContent = await fs.readFile(headFilePath, 'utf8');
-        if (headContent.startsWith('ref: ')) {
-            const branchName = headContent.replace('ref: ', '').trim();
-            const branchHashPath = utils.getRepositoryType() === "bare" ?
-                path.join(utils.getGivWorkingDirRoot(), "") :
-                path.join(utils.getGivWorkingDirRoot(), ".gitv/HEAD");
-            commitHash = await fs.readFile(headFilePath, 'utf8');
-
-        } else {
-            // HEAD处于分离状态，直接指向一个commit  
-            commitHash = headContent;
-            console.log('HEAD is in detached state, pointing to a specific commit');
-        }
-
-        const objectsHashPath = `${commitHash.substring(0, 2)}/${commitHash.substring(2)}`
-        const commitHashPath = utils.getRepositoryType() === "bare" ?
-            path.join(utils.getGivWorkingDirRoot(), `objects/${objectsHashPath}`) :
-            path.join(utils.getGivWorkingDirRoot(), `.gitv/objects/${objectsHashPath}`);
-
-        const commitContent = await fs.readFile(headFilePath, 'utf8');
-        return commitContent.split(/\s/)[1];
     }
 
     async getTreeObj() {
@@ -167,7 +128,6 @@ class GitvCommit {
             const result = await index.writeObjects(commit);
             return result;
         } catch (error) {
-            console.error("Error:", error);
             throw error;
         }
     }

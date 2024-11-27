@@ -92,26 +92,16 @@ class GitvRef {
 
             // 创建新的分支文件，并写入commit hash  
             await fsPromise.writeFile(path.join(this.localBranchesDir, `${branchName}`), commitHash.trim(), 'utf8');
-
-            // 方法结束，新分支创建成功  
-            console.log(`新分支 ${branchName} 创建成功`);
         } catch (error) {
-            // 捕获并处理异常  
-            console.error(`创建分支 ${branchName} 时发生错误:`, error);
             throw error; // 重新抛出错误，以便上层调用者可以处理  
         }
     }
 
-    async createRefById(branchName, commitId) {
+    async updateRefByBranchName(branchName, commitId) {
         try {
             // 创建新的分支文件，并写入commit hash  
             await fsPromise.writeFile(path.join(this.localBranchesDir, `${branchName}`), commitId.trim(), 'utf8');
-
-            // 方法结束，新分支创建成功  
-            console.log(`新分支 ${branchName} 创建成功`);
         } catch (error) {
-            // 捕获并处理异常  
-            console.error(`创建分支 ${branchName} 时发生错误:`, error);
             throw error; // 重新抛出错误，以便上层调用者可以处理  
         }
     }
@@ -228,7 +218,7 @@ class GitvRef {
 
     getBranchHash(filePath) {
         try {
-            const headContent = fs.readFileSync(filePath, 'utf8');
+            const headContent = fs.readFileSync(filePath || this.headFilePath, 'utf8');
             // console.log('Reading file:', filePath);
             // console.log('Content:', headContent);
 
@@ -243,17 +233,11 @@ class GitvRef {
                 const newRefPath = `${this.localBranchesDir}/${headContentList[headContentList.length - 1]}`.trim(); // 移除'ref: '前缀
                 return this.getBranchHash(newRefPath) // 返回哈希值字符串
             } else {
-                throw new Error('Unexpected format in .git/HEAD');
+                throw new Error('Unexpected format in HEAD');
             }
 
         } catch (error) {
-            if (error.code === 'ENOENT') {
-                // console.log(error.message)
-                return undefined
-                throw new Error('Git repository not found or invalid branch provided');
-            } else {
-                throw error;
-            }
+            throw error;
         }
     }
 

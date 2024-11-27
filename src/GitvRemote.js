@@ -16,36 +16,40 @@ class GitvRemote {
         const gitvRemoteActions = {
             getRemoteNames: async () => this.displayRemoteNames(),
             getRemoteDetails: () => this.getRemoteDetails(),
-            addNewRemote: (remoteName, url) => this.addNewRemote(remoteName, url),
-            removeRemote: (remoteName) => this.removeRemote(remoteName),
-            setRemote: (remoteName, url) => this.setRemote(remoteName, url),
-            renameRemote: (oldName, newName) => this.renameRemote(oldName, newName),
+            addNewRemote: (remoteName, url) => this.manageRemote('add', {
+                remoteName
+            }, url),
+            removeRemote: (remoteName) => this.manageRemote('remove', {
+                remoteName
+            }),
+            setRemote: (remoteName, url) => this.manageRemote('set', {
+                remoteName
+            }, url),
+            renameRemote: (remoteName, newName) => this.manageRemote('rename', {
+                remoteName
+            }, newName),
         };
 
         const action = this.options.add ? 'addNewRemote' : this.options.remove ? 'removeRemote' : this.options.setUrl ? 'setRemote' : this.options.rename ? 'renameRemote' : this.options.verbose ? 'getRemoteDetails' : !this.url && Object.keys(this.options).length === 0 ? 'getRemoteNames' : null;
         if (action) {
-            // if (action === 'renameBranch' && !this.options.newBranch) {
-            //     console.error('Invalid command: Please provide a new branch name for rename');
-            //     return;
-            // }
-            // 执行相应的操作 
-            // gitvRemoteActions[action](...(action === 'renameBranch' ? [this.branchName, this.options.newBranch] : [this.branchName]));
             gitvRemoteActions[action](this.options, this.url);
         } else {
-            console.error('Invalid command: Please provide a valid git branch command');
+            throw new Error('Invalid command: Please provide a valid git branch command');
         }
-
     }
 
     getRemoteNames() {
-        const config = this.config.read()
-        console.log(config, "---------------------------------------=============-----------------=======");
-        // 确保config对象存在且包含remote属性
-        if (config && config.remote) {
-            // 使用Object.keys()获取remote对象下的所有键  
-            return Object.keys(config.remote);
-        } else {
-            return [];
+        try {
+            const config = this.config.read()
+            // 确保config对象存在且包含remote属性
+            if (config && config.remote) {
+                // 使用Object.keys()获取remote对象下的所有键  
+                return Object.keys(config.remote);
+            } else {
+                return [];
+            }
+        } catch (err) {
+            throw err
         }
     }
 
@@ -57,12 +61,22 @@ class GitvRemote {
     }
 
     getRemoteDetails() {
-        const config = this.config.read()
-        // 确保config对象存在且包含remote属性
-        if (config && config.remote) {
-            // 使用Object.keys()获取remote对象下的所有键  
+        try {
+            const config = this.config.read()
+            if (config && config.remote) {
+                return config.remote;
+            } else {
+                return {};
+            }
+        } catch (err) {
+            throw err
+        }
+    }
+
+    displayRemoteDetails() {
+        try {
+            const remotesConfig = this.getRemoteDetails()
             let output = '';
-            const remotesConfig = config.remote
             for (const remoteName in remotesConfig) {
                 const remoteInfo = remotesConfig[remoteName];
                 const fetchUrl = remoteInfo.url; // 通常用于fetch操作  
@@ -71,71 +85,164 @@ class GitvRemote {
                 output += `${remoteName}\t${pushUrl} (push)\n`;
             }
             console.log(output);
+        } catch (err) {
+            throw err;
         }
     }
 
     isRemoteRepositoryExists(name) {
-        const remoteNames = this.getRemoteNames();
-        return remoteNames.includes(name);
+        try {
+            const remoteNames = this.getRemoteNames();
+            return remoteNames.includes(name);
+        } catch (err) {
+            throw err
+        }
     }
 
     addNewRemote({
         add: remoteName
     }, url) {
-        if (this.isRemoteRepositoryExists(remoteName)) {
-            console.log(`error: remote origin already exists.`);
-            return;
+        try {
+            if (this.isRemoteRepositoryExists(remoteName)) {
+                throw new Error(`error: remote origin already exists.`);
+            }
+            const config = this.config.read();
+            const newRemoteObj = {
+                url,
+                fetch: `+refs/heads/*:refs/remotes/${remoteName}/*`
+            }
+            config.remote[`${remoteName}`] = newRemoteObj;
+            // TODO objToGitConfigString方法有问题需要修改
+            fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
+        } catch (err) {
+            throw err;
         }
-        const config = this.config.read();
-        const newRemoteObj = {
-            url,
-            fetch: `+refs/heads/*:refs/remotes/${remoteName}/*`
-        }
-        config.remote[`${remoteName}`] = newRemoteObj;
-        // TODO objToGitConfigString方法有问题需要修改
-        fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
     }
 
     removeRemote({
         remove: remoteName
     }) {
-        if (!this.isRemoteRepositoryExists(remoteName)) {
-            console.log(`error: No such remote: 'origin-test'`);
-            return;
+        try {
+            if (!this.isRemoteRepositoryExists(remoteName)) {
+                throw new Error(`error: No such remote: 'origin-test'`);
+            }
+            const config = this.config.read();
+            delete config.remote[`${remoteName}`];
+            fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
+        } catch (err) {
+            throw err;
         }
-        const config = this.config.read();
-        delete config.remote[`${remoteName}`];
-        fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
     }
 
     setRemote({
         setUrl: remoteName
     }, url) {
         {
-            if (!this.isRemoteRepositoryExists(remoteName)) {
-                console.error(`error: No such remote ${remoteName}`);
-                return;
+            try {
+                if (!this.isRemoteRepositoryExists(remoteName)) {
+                    throw new Error(`error: No such remote ${remoteName}`);
+                }
+                const config = this.config.read();
+                config.remote[`${remoteName}`].url = url;
+                fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
+            } catch (err) {
+                throw err
             }
-            const config = this.config.read();
-            config.remote[`${remoteName}`].url = url;
-            fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
         }
     }
 
-    renameRemote ({rename: oldName}, newName) {
-        if (!this.isRemoteRepositoryExists(oldName)) {
-            console.error(`error: No such remote ${oldName}`);
-            return;
+    renameRemote({
+        rename: oldName
+    }, newName) {
+        try {
+            // 检查远程仓库列表，不存在名为 oldName 的远程仓库
+            if (!this.isRemoteRepositoryExists(oldName)) {
+                throw new Error(`error: No such remote ${oldName} in repository`);
+            }
+            //检查远程仓库列表，已经存在名为 newName 的远程仓库
+            if (!this.isRemoteRepositoryExists(newName)) {
+                throw new Error(`error: remote origin ${newName} already exists.`);
+            }
+            const config = this.config.read();
+            const content = config.remote[`${remoteName}`].url;
+            delete config.remote[`${remoteName}`].url;
+            config.remote[`${newName}`] = content;
+            fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
+        } catch (err) {
+            throw err
         }
-        if (!this.isRemoteRepositoryExists(newName)) {
-            console.error(`error: remote origin already exists.`);
-            return;
+    }
+
+
+    manageRemote(operation, {
+        remoteName
+    }, urlOrNewName) {
+        try {
+            // 确保至少提供了远程仓库名  
+            if (!remoteName) {
+                throw new Error('error: remoteName is required.');
+            }
+
+            const config = this.config.read();
+
+            switch (operation) {
+                case 'add':
+                    // 检查远程仓库是否已经存在  
+                    if (this.isRemoteRepositoryExists(remoteName)) {
+                        throw new Error(`error: remote ${remoteName} already exists.`);
+                    }
+
+                    // 添加远程仓库  
+                    const newRemoteObj = {
+                        url,
+                        fetch: `+refs/heads/*:refs/remotes/${remoteName}/*`
+                    };
+                    config.remote[`${remoteName}`] = newRemoteObj;
+                    break;
+
+                case 'remove':
+                    // 检查远程仓库是否存在  
+                    if (!this.isRemoteRepositoryExists(remoteName)) {
+                        throw new Error(`error: No such remote: '${remoteName}'`);
+                    }
+
+                    // 移除远程仓库  
+                    delete config.remote[`${remoteName}`];
+                    break;
+
+                case 'set':
+                    // 检查远程仓库是否存在  
+                    if (!this.isRemoteRepositoryExists(remoteName)) {
+                        throw new Error(`error: No such remote ${remoteName}`);
+                    }
+
+                    // 设置远程仓库的URL  
+                    config.remote[`${remoteName}`].url = urlOrNewName;
+                    break;
+
+                case 'rename':
+                    // 检查远程仓库列表，不存在名为 oldName 的远程仓库
+                    if (!this.isRemoteRepositoryExists(oldName)) {
+                        throw new Error(`error: No such remote ${oldName} in repository`);
+                    }
+                    //检查远程仓库列表，已经存在名为 newName 的远程仓库
+                    if (!this.isRemoteRepositoryExists(urlOrNewName)) {
+                        throw new Error(`error: remote origin ${urlOrNewName} already exists.`);
+                    }
+                    const config = this.config.read();
+                    const content = config.remote[`${remoteName}`].url;
+                    delete config.remote[`${remoteName}`].url;
+                    config.remote[`${urlOrNewName}`] = content;
+                    break;
+                default:
+                    throw new Error('error: Unsupported operation.');
+            }
+
+            // 写入配置  
+            fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
+        } catch (err) {
+            throw err;
         }
-        const config = this.config.read();
-        const content = config.remote[`${remoteName}`].url;
-        delete config.remote[`${remoteName}`].url;
-        config.remote[`${newName}`]  = content;
-        fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
     }
 }
 

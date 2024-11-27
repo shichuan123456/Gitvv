@@ -12,15 +12,24 @@ class GitvStatus {
     this.headFilePath = path.join(this.gitvRepoPath, 'HEAD');
     this.ref = new GitvRef();
   }
+
+  // 定义一个静态getter来获取文件状态的对象  
+  // 这个对象包含了文件在Git操作中可能的状态 
   static get FILE_STATUS() {
     return {
+      /** 文件被添加到仓库中，但尚未提交 */
       ADD: "add",
+      /** 文件已被修改 */
       MODIFY: "modify",
+      /** 文件已被删除 */
       DELETE: "delete",
+      /** 文件自上次提交以来未发生变化 */
       SAME: "same",
+      /** 文件存在冲突，需要解决 */
       CONFLICT: "conflict"
     };
   }
+
   async status() {
     console.log("gitv statusfffff");
     // 必须是Gitv仓库
@@ -44,23 +53,26 @@ class GitvStatus {
     ].flat(Infinity).join("\n"));
   }
 
-
   async modified() {
-    const workToc = await this.workingCopyToc();
-    const idx = await index.read();
-    const indexToc = utils.convertObject(idx);
-    const modifiedKeys = [];
+    try {
+      const workToc = await this.workingCopyToc();
+      const idx = await index.read();
+      const indexToc = utils.convertObject(idx);
+      const modifiedKeys = [];
 
-    for (let key in indexToc) {
-      if (indexToc.hasOwnProperty(key)) {
-        // 检查 workToc 对象中是否存在该键  
-        if (!workToc.hasOwnProperty(key) || indexToc[key] !== workToc[key]) {
-          // 如果不存在或者值不同，则添加到数组中  
-          modifiedKeys.push(key);
+      for (let key in indexToc) {
+        if (indexToc.hasOwnProperty(key)) {
+          // 检查 workToc 对象中是否存在该键  
+          if (!workToc.hasOwnProperty(key) || indexToc[key] !== workToc[key]) {
+            // 如果不存在或者值不同，则添加到数组中  
+            modifiedKeys.push(key);
+          }
         }
       }
+      return modifiedKeys;
+    } catch (err) {
+      throw err;
     }
-    return modifiedKeys;
   };
 
   async getHeadDesc() {
@@ -75,81 +87,96 @@ class GitvStatus {
         return `On branch ${headDesc}`; // 如果 HEAD 在某个分支上，返回 "On branch ... "。
       }
     } catch (error) {
-      // 捕获并处理可能的错误
-      console.error("An error occurred while getting the head description:", error);
-      return "An error occurred while getting the head description.";
+      throw error;
     }
   }
 
 
   async untracked() {
-    const workingFiles = [];
-    await utils.readAllFilesInDirectory(this.gitvRepoPath, (name, content, resolvedPath) => {
-      if (!resolvedPath.startsWith(path.join(this.gitvRepoPath, ".gitv"))) {
-        workingFiles.push(path.relative(this.gitvRepoPath, resolvedPath));
-      }
-    })
+    try {
+      const workingFiles = [];
+      await utils.readAllFilesInDirectory(this.gitvRepoPath, (name, content, resolvedPath) => {
+        if (!resolvedPath.startsWith(path.join(this.gitvRepoPath, ".gitv"))) {
+          workingFiles.push(path.relative(this.gitvRepoPath, resolvedPath));
+        }
+      })
 
-    const idx = await index.read();
-    workingFiles.filter(file => !utils.convertObject(idx).hasOwnProperty(file));
-    return workingFiles;
+      const idx = await index.read();
+      return workingFiles.filter(file => !utils.convertObject(idx).hasOwnProperty(file));
+    } catch (err) {
+      throw err;
+    }
   }
 
   async deleted() {
-    const workingFiles = [];
-    await utils.readAllFilesInDirectory(this.gitvRepoPath, (name, content, resolvedPath) => {
-      if (!resolvedPath.startsWith(path.join(this.gitvRepoPath, ".gitv"))) {
-        workingFiles.push(path.relative(this.gitvRepoPath, resolvedPath));
-      }
-    })
+    try {
+      const workingFiles = [];
+      await utils.readAllFilesInDirectory(this.gitvRepoPath, (name, content, resolvedPath) => {
+        if (!resolvedPath.startsWith(path.join(this.gitvRepoPath, ".gitv"))) {
+          workingFiles.push(path.relative(this.gitvRepoPath, resolvedPath));
+        }
+      })
 
-    const idx = await index.read();
-    return Object.keys(utils.convertObject(idx)).filter(key => !workingFiles.includes(key));
+      const idx = await index.read();
+      return Object.keys(utils.convertObject(idx)).filter(key => !workingFiles.includes(key));
+    } catch (err) {
+      throw err;
+    }
   }
 
-  read(path) {
-    if (fs.existsSync(path)) {
-      return fs.readFileSync(path, "utf8");
+  read(filePath) {
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath, "utf8");
     }
   }
 
   async workingCopyToc() {
-    // 读取 Git 索引，提取并过滤出存在于工作目录中的文件路径  
-    const tocObj = (await index.read())
-      .keys() // 获取索引中的所有键  
-      .map(key => key.split(",")[0]) // 提取文件路径  
-      .filter(path => fs.existsSync(path.join(utils.getGivWorkingDirRoot(), path))) // 过滤存在文件  
-      .reduce((obj, path) => {
-        const filePath = path.join(utils.getGivWorkingDirRoot(), path);
-        const blobHash = utils.sha1(utils.createGitBlob(filePath));
-        obj[path] = blobHash;
-        return obj;
-      }, {});
-    // 返回包含文件路径和哈希的对象  
-    return tocObj;
+    try {
+      // 读取 Git 索引，提取并过滤出存在于工作目录中的文件路径
+      const tocObj = (await index.read())
+        .keys() // 获取索引中的所有键  
+        .map(key => key.split(",")[0]) // 提取文件路径  
+        .filter(filePath => fs.existsSync(path.join(utils.getGivWorkingDirRoot(), filePath))) // 过滤存在文件  
+        .reduce((obj, filePath) => {
+          const filePath = path.join(utils.getGivWorkingDirRoot(), filePath);
+          const blobHash = utils.sha1(utils.createGitBlob(filePath));
+          obj[filePath] = blobHash;
+          return obj;
+        }, {});
+      // 返回包含文件路径和哈希的对象  
+      return tocObj;
+    } catch (err) {
+      throw err;
+    }
   }
 
   async conflictedFilePaths(stageNumber) {
-    const idx = await index.read();
-    return Object.keys(idx)
-      .filter(key => {
-        const parts = key.split(',');
-        return parts[1] && parseInt(parts[1], 10) === stageNumber;
-      })
-      .map(key => key.split(',')[0]);
-  };
+    try {
+      const idx = await index.read();
+      return Object.keys(idx)
+        .filter(key => {
+          const parts = key.split(',');
+          return parts[1] && parseInt(parts[1], 10) === stageNumber;
+        })
+        .map(key => key.split(',')[0]);
+    } catch (err) {
+      throw err;
+    }
+  }
 
   async toBeCommitted() {
-    const commit = new Commit();
-    const currentCommitId = this.ref.getBranchHash(this.headFilePath);
-    const treeHash = commit.readCommit(currentCommitId);
-    const treeContent = await utils.readObject(treeHash);
-    const treeObjects = await utils.fileTree(treeHash);
-    const nestedTree = utils.flattenNestedTree(treeObjects);
-    const idx = await index.read();
-    const idxWidthOutStageNumber = utils.convertObject(idx);
-    const aaa = this.diffTwoTocs(nestedTree, idxWidthOutStageNumber);
-    return aaa;
+    try {
+      const currentCommitId = this.ref.getBranchHash(this.headFilePath);
+      const treeHash = Commit.parseCommitObjectById(currentCommitId) ? .treeSha;
+      const treeObjects = await utils.fileTree(treeHash);
+      const nestedTree = utils.flattenNestedTree(treeObjects);
+      const idx = await index.read();
+      const idxWidthOutStageNumber = utils.convertObject(idx);
+      const aaa = this.diffTwoTocs(nestedTree, idxWidthOutStageNumber);
+      return aaa;
+    } catch (err) {
+      throw err;
+    }
   }
 
   fileStatus(receiver, giver, base) {

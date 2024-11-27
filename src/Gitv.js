@@ -18,7 +18,7 @@ class Gitv {
       // 调用init方法实现初始化功能
       this.gitvInit.init();
     } catch (err) {
-
+      throw err;
     }
   }
 

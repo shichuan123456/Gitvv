@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 
 const commander = require('commander')
-const pkg = require('../package.json')
 const Gitv = require('../src/Gitv.js')
 
 
 const program = new commander.Command("gitv")
 
 program.usage('[command] [options]')
-program.version(pkg.version)
+program.version(require("../package.json").version)
 
 const gitv = new Gitv()
 
@@ -20,7 +19,7 @@ program
   // 给init命令添加bare参数
   .option('--bare', 'Initialize a bare Gitv repository')
   // 当执行这个命令的时候会执行的回调函数，可接收命令行的参数
-  .action((directoryTarget = "", options) => {
+  .action((directoryTarget, options) => {
     // 具体的命令逻辑, 其中directoryTarget和options分别是该命令接收的参数和选项
     try {
       gitv.init(directoryTarget, options)
@@ -91,7 +90,6 @@ program
     } catch (err) {
       console.error(`Failed to create or modify the branch '${branchName}' in the Gitv repository. Error details:`, err);
     }
-
   });
 
 program
@@ -103,7 +101,11 @@ program
   .option('--set-url <name> <url>', 'Change the URL of an existing remote repository')
   .option('--rename <oldName> <newName>', 'Rename an existing remote repository')
   .action((url, options) => {
-    gitv.remote(url, options); // 这里应该打印出包含所有选项和参数的对象
+    try {
+      gitv.remote(url, options);
+    } catch (err) {
+      console.error("An error occurred while interacting with Gitv remotes. Error details:", err);
+    }
   });
 
 // 定义 gitv log 命令  
@@ -114,7 +116,11 @@ program
   .option('--oneline', 'Show each commit on a single line')
   .option('--graph', 'Draw a text-based graph of the commit history')
   .action((options) => {
-    gitv.log(options);
+    try {
+      gitv.log(options);
+    } catch (err) {
+      console.error(`Failed to retrieve Git log. Error details:`, err);
+    }
   });
 
 program

@@ -8,7 +8,7 @@ const zlib = require('zlib');
 const gzip = util.promisify(zlib.gzip);
 class GitvIndex {
     constructor() {
-        this.indexPath = utils.getResourcePath('index'); 
+        this.indexPath = utils.getResourcePath('index');
     }
     // 读取 index 文件，返回一个包含 index 对象的 Promise
     async read() {
@@ -30,8 +30,7 @@ class GitvIndex {
             }
             return idx;
         } catch (err) {
-            console.error("Error reading index file:", err);
-            return {}; // 返回空对象或者根据需要进行其他处理
+            throw err;
         }
     }
 
