@@ -12,8 +12,6 @@ program.version(require("../package.json").version)
 
 const gitv = new Gitv()
 
-
-
 program
   // 添加int 命令，有一个可选的参数
   .command('init [directoryTarget]')
@@ -28,8 +26,8 @@ program
       console.log("bin");
       
       gitv.init(directoryTarget, options)
-    } catch (error) {       // TODO, 这里的路径需要处理
-      console.error(`Failed to initialize Gitv repository in directory '${directoryTarget}'. Error details:`, error);
+    } catch (error) { 
+      console.error(`Failed to initialize Gitv repository. Error details:`, error);
     }
   })
 
