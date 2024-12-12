@@ -1,22 +1,24 @@
 const GitvInit = require("./GitvInit")
-const GitvAdd = require("./GitvAdd")
-const GitvRm = require("./GitvRm");
-const GitvCommit = require("./GitvCommit");
-const GitvClone = require("./GitvClone");
-const GitvBranch = require("./GitvBranch");
-const GitvRemote = require("./GitvRemote");
-const GitvLog = require("./GitvLog");
-const GitvStatus = require("./GitvStatus");
-const GitvMerge = require("./GitvMerge");
+
+
+// const GitvAdd = require("./GitvAdd")
+// const GitvRm = require("./GitvRm");
+// const GitvCommit = require("./GitvCommit");
+// const GitvClone = require("./GitvClone");
+// const GitvBranch = require("./GitvBranch");
+// const GitvRemote = require("./GitvRemote");
+// const GitvLog = require("./GitvLog");
+// const GitvStatus = require("./GitvStatus");
+// const GitvMerge = require("./GitvMerge");
 
 class Gitv {
   constructor() {}
-  init(directoryTarget, options) {
+  async init(directoryTarget, options) {
     try {
       // 初始化GitvInit实例
       this.gitvInit = new GitvInit(directoryTarget, options)
       // 调用init方法实现初始化功能
-      this.gitvInit.init();
+      await this.gitvInit.init();
     } catch (err) {
       throw err;
     }

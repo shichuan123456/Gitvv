@@ -4,21 +4,41 @@ const path = require("path")
 const {
     createHash
 } = require("crypto");
-const Commit = require("./Commit");
 class Utils {
     constructor() {}
     // 判断目录是否是一个 Gitv 仓库  
-    IsDirectoryGitvRepo(dir) {
-        return this.getGitvRepoType(dir) !== "";
+    directoryIsGitvRepo(dir) {
+        return this.getRepositoryTypeFromDirectory(dir) !== "";
     }
     // 检查目录下是否存在 Gitv 仓库的必要元数据文件和文件夹
-    getGitvRepoType(dir) {
+    getRepositoryTypeFromDirectory(dir) {
         if (!fs.existsSync(dir)) return;
         // 检查是否是裸仓库或一般仓库
         const isBareGitvRepository = this.isExistGitvRepoMetadata(dir, "bare");
         const isGeneralGitvRepository = this.isExistGitvRepoMetadata(dir, "general");
         // "" , "bare", "general"
         return isBareGitvRepository ? "bare" : (isGeneralGitvRepository ? "general" : "");
+    }
+
+    // 检查 Gitv 仓库的元数据是否存在
+    isExistGitvRepoMetadata(dir, type) {
+        // 构建元数据文件和文件夹的路径  
+        const baseDir = type === "bare" ? dir : path.join(dir, '.gitv');
+        const headFilePath = path.join(baseDir, 'HEAD');
+        const objectsFolderPath = path.join(baseDir, 'objects');
+        const refsFolderPath = path.join(baseDir, 'refs');
+
+        // 检查元数据文件和文件夹是否存在  
+        try {
+            return (
+                fs.existsSync(headFilePath) &&
+                fs.statSync(objectsFolderPath).isDirectory() &&
+                fs.statSync(refsFolderPath).isDirectory()
+            );
+        } catch (error) {
+            // 如果发生错误（例如目录不存在），则返回false  
+            return false;
+        }
     }
 
     // 获取仓库的类型
@@ -36,26 +56,7 @@ class Utils {
             path.join(this.getGivWorkingDirRoot(), `.gitv/${fileName}`);
     }
 
-    // 检查 Gitv 仓库的元数据是否存在
-    isExistGitvRepoMetadata(dir, type) {  
-        // 构建元数据文件和文件夹的路径  
-        const baseDir = type === "bare" ? dir : path.join(dir, '.gitv');  
-        const headFilePath = path.join(baseDir, 'HEAD');  
-        const objectsFolderPath = path.join(baseDir, 'objects');  
-        const refsFolderPath = path.join(baseDir, 'refs');  
-      
-        // 检查元数据文件和文件夹是否存在  
-        try {  
-            return (  
-                fs.existsSync(headFilePath) &&  
-                fs.statSync(objectsFolderPath).isDirectory() &&  
-                fs.statSync(refsFolderPath).isDirectory()  
-            );  
-        } catch (error) {  
-            // 如果发生错误（例如目录不存在），则返回false  
-            return false;  
-        }  
-    }
+    
 
     async writeFilesFromTree(tree, prefix) {
         try {
@@ -64,25 +65,20 @@ class Utils {
                 const filePath = path.join(prefix, name);
 
                 if (typeof tree[name] === 'string') {
-                    // 如果是文件，则创建目录并写入文件  
-                    const dir = path.dirname(filePath);
-                    await fs.mkdir(dir, {
-                        recursive: true
-                    }).catch(err => {
-                        // 如果目录已经存在，则忽略错误  
+                    // 如果是文件，则直接写入文件（fsPromise.writeFile如果文件所在的目录不存在，它会自动创建这些目录）  
+                    await fsPromise.writeFile(filePath, tree[name]);
+                } else {
+                    try {
+                        await fsPromise.mkdir(filePath, {
+                            recursive: true
+                        });
+                    } catch (err) {
                         if (err.code !== 'EEXIST') {
                             throw err;
                         }
-                    });
-                    await fs.writeFile(filePath, tree[name]);
-                } else {
-                    // 如果是目录，则递归调用自身  
-                    if (!(await fs.pathExists(filePath))) {
-                        await fs.mkdir(filePath, {
-                            recursive: true
-                        });
                     }
-                    await writeFilesFromTree(tree[name], filePath);
+                    // 如果是目录，则递归调用自身  
+                    await this.writeFilesFromTree(tree[name], filePath);
                 }
             }
         } catch (err) {
@@ -96,11 +92,7 @@ class Utils {
     }
 
     // 如果目录目标已经是绝对路径，则直接返回；否则，将其与当前工作目录拼接后返回  
-    resolveGitvRepoPath(directoryTarget) {
-        if (typeof directoryTarget !== 'string' || directoryTarget === '') {
-            throw new Error('Invalid directory target: must be a non-empty string');
-        }
-
+    resolveAbsolutePath(directoryTarget = "") {
         if (path.isAbsolute(directoryTarget)) {
             // 如果是绝对路径，则直接返回  
             return directoryTarget;
@@ -115,10 +107,10 @@ class Utils {
     getGivWorkingDirRoot() {
         let dir = process.cwd(); // 当前命令执行目录
         // 从dir开始依次向上查找直到找到或到目录的顶层
-        while (!this.IsDirectoryGitvRepo(dir) && path.parse(dir).root !== path.resolve(dir)) {
+        while (!this.isCurrentDirectoryGitvRepo(dir) && path.parse(dir).root !== path.resolve(dir)) {
             dir = path.join(dir, ".."); // 获取上一级目录
         }
-        return this.IsDirectoryGitvRepo(dir) ? dir : "";
+        return this.isCurrentDirectoryGitvRepo(dir) ? dir : "";
     }
 
     isSubdirectory(parentPath, childPath) {
@@ -135,6 +127,8 @@ class Utils {
         return hash.digest('hex');
     }
 
+    // SHA-1 加密方法，调用encrypt对内容进行 SHA-1 加密
+    sha1 = (content) => encrypt('sha1', content)
     collectFiles = async (pathOrFile) => {
         try {
             const stats = await fsPromise.stat(pathOrFile);
@@ -152,7 +146,7 @@ class Utils {
                     // 如果是目录，递归搜集子目录中的文件
                     return this.collectFiles(filePath);
                 } else {
-                    // 如果是文件，直接返回文件路径
+                    // 如果是文件，直接返回文件路径 
                     return filePath;
                 }
             }));
@@ -160,11 +154,9 @@ class Utils {
             // 展平嵌套的数组结构
             return fileList.flat();
         } catch (err) {
-            return err;
+            throw err;
         }
     }
-    // SHA-1 加密方法，对内容进行 SHA-1 加密
-    sha1 = (content) => this.encrypt('sha1', content)
 
     createGitBlob = (content) => {
         const contentLength = Buffer.byteLength(content, 'utf8');
@@ -193,10 +185,7 @@ class Utils {
 
     convertObject(idx) {
         try {
-            // 假设index.read()是一个异步操作，需要等待其完成  
             let convertedObject = {}
-            // let idx = await index.read();  
-            // 假设inputObject是在index.read()之后可访问的，或者它是一个全局变量  
             for (const [key, value] of Object.entries(idx)) {
                 const newKey = key.split(',')[0];
                 convertedObject[newKey] = value;
@@ -378,6 +367,3 @@ class Utils {
 
 
 module.exports = new Utils()
-
-
-
