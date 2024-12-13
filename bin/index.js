@@ -11,6 +11,7 @@ program.usage('[command] [options]')
 program.version(require("../package.json").version)
 
 const gitv = new Gitv()
+const utils = require("../src/Utils")
 
 program
   // 添加int 命令，有一个可选的参数
@@ -23,28 +24,27 @@ program
   .action((directoryTarget, options) => {
     // 具体的命令逻辑, 其中directoryTarget和options分别是该命令接收的参数和选项
     try {
-      console.log("bin");
-      
       gitv.init(directoryTarget, options)
     } catch (error) { 
       console.error(`Failed to initialize Gitv repository. Error details:`, error);
     }
   })
 
-// program
-//   // 添加add命令，有一个必填参数
-//   .command('add <pathOrFile>')
-//   // 给命令添加描述，会在帮助中提示用户
-//   .description('Add files contents to the index')
-//   // 命令执行时的回调函数，并接收命令行的参数
-//   .action((pathOrFile) => {
-//     // 调用Gitv类的add实例方法
-//     try {
-//       gitv.add(pathOrFile);
-//     } catch (error) {
-//       console.error(`Failed to add '${pathOrFile}' to the Gitv repository. Error details:`, error);
-//     }
-//   })
+program
+  // 添加add命令，有一个必填参数
+  .command('add <pathOrFile>')
+  // 给命令添加描述，会在帮助中提示用户
+  .description('Add files contents to the index')
+  // 命令执行时的回调函数，并接收命令行的参数
+  .action((pathOrFile) => {
+    // 调用Gitv类的add实例方法
+    try {
+      gitv.add(pathOrFile);
+    } catch (error) {
+      // 在上一小节中，我们实现了resolveAbsolutePath方法，从而能够更精确地提供错误提示信息
+      console.error(`Failed to add ${utils.resolveAbsolutePath(pathOrFile)} to the Gitv repository. Error details:`, error.message);
+    }
+  })
 
 // program
 //   .command('rm <fileOrPath>')

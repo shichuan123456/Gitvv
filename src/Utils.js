@@ -44,19 +44,19 @@ class Utils {
     // 获取仓库的类型
     getRepositoryType() {
         //获取工作区根目录
-        const dirRoot = this.getGivWorkingDirRoot()
+        const dirRoot = this.getGitvWorkingDirRoot()
         // 指定目录的仓库类型获取，封装init命令时已经实现
-        return this.getGitvRepoType(dirRoot)
+        return this.getRepositoryTypeFromDirectory(dirRoot)
     }
 
     // 获取仓库中文件的具体路径
     getResourcePath(fileName = "") {
-        return this.getRepositoryType() === "bare" ?
-            path.join(this.getGivWorkingDirRoot(), `${fileName}`) :
-            path.join(this.getGivWorkingDirRoot(), `.gitv/${fileName}`);
+        const repoType = this.getRepositoryType();
+        return repoType === "" ? "" : (
+            repoType === "bare" ? path.join(this.getGitvWorkingDirRoot(), `${fileName}`) :
+            path.join(this.getGitvWorkingDirRoot(), `.gitv/${fileName}`)
+        )
     }
-
-    
 
     async writeFilesFromTree(tree, prefix) {
         try {
@@ -88,7 +88,7 @@ class Utils {
 
     // 命令是否在Gitv仓库内执行
     isInGitvRepo() {
-        return this.getGivWorkingDirRoot() !== "";
+        return this.getGitvWorkingDirRoot() !== "";
     }
 
     // 如果目录目标已经是绝对路径，则直接返回；否则，将其与当前工作目录拼接后返回  
@@ -104,13 +104,13 @@ class Utils {
     }
 
     // 获取Gitv仓库的工作区的根目录
-    getGivWorkingDirRoot() {
+    getGitvWorkingDirRoot() {
         let dir = process.cwd(); // 当前命令执行目录
         // 从dir开始依次向上查找直到找到或到目录的顶层
-        while (!this.isCurrentDirectoryGitvRepo(dir) && path.parse(dir).root !== path.resolve(dir)) {
+        while (!this.directoryIsGitvRepo(dir) && path.parse(dir).root !== path.resolve(dir)) {
             dir = path.join(dir, ".."); // 获取上一级目录
         }
-        return this.isCurrentDirectoryGitvRepo(dir) ? dir : "";
+        return this.directoryIsGitvRepo(dir) ? dir : "";
     }
 
     isSubdirectory(parentPath, childPath) {
@@ -129,6 +129,16 @@ class Utils {
 
     // SHA-1 加密方法，调用encrypt对内容进行 SHA-1 加密
     sha1 = (content) => encrypt('sha1', content)
+
+    createGitvObject = (content, type) => {
+        // 获取content的字节长度  
+        const contentLength = Buffer.byteLength(content, 'utf8');
+        // 构建对象头，格式为 "类型 长度\x00"  
+        const header = `${type} ${contentLength}\x00`;
+        // 拼接对象头和实际内容，形成完整的Git对象内容  
+        return `${header}${content}`;
+    }
+
     collectFiles = async (pathOrFile) => {
         try {
             const stats = await fsPromise.stat(pathOrFile);
