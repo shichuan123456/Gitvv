@@ -50,7 +50,6 @@ program
   .command('rm <fileOrPath>')
   .description('Remove files from the working directory and the index')
   .option('--cached', 'Remove files from the index only')
-  .option('-f', 'Force removal of files from both working directory and index')
   .option('-r', 'Recursively remove files and directories')
   .action((fileOrPath, options) => {
     try {

@@ -8,8 +8,8 @@ const index = require('./GitvIndex')
 class GitvRm {
     constructor(pathOrfile, options) {
         this.pathOrfile = pathOrfile
-        this.absolutePath = utils.resolveGitvRepoPath(this.pathOrfile)
         this.options = options
+        this.absolutePath = utils.resolveGitvRepoPath(this.pathOrfile)
     }
 
     async rm() {
@@ -40,8 +40,10 @@ class GitvRm {
                     await fsPromise.unlink(filePath);
                 }
             }
+            // 获取需要删除的文件列表
             const filesToRm = await index.filteredFiles(files);
             filesToRm.forEach(async function (file) {
+                // 负责从索引中删除指定文件并更新索引
                 await index.deleteAndWrite(path.relative(utils.getGivWorkingDirRoot(), file))
             });
         } catch (err) {

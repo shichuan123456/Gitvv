@@ -90,7 +90,9 @@ class GitvIndex {
 
     async filteredFiles(files) {
         try {
+            // 读取并转换索引数据
             const idx = utils.convertObject(await this.read());
+            // 筛选存在于索引中的文件
             return files.filter(file => idx.hasOwnProperty(path.relative(utils.getGivWorkingDirRoot(), file.toString())));
         } catch (err) {
             throw err;
