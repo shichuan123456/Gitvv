@@ -26,7 +26,7 @@ program
     try {
       gitv.init(directoryTarget, options)
     } catch (error) { 
-      console.error(`Failed to initialize Gitv repository. Error details:`, error);
+      console.error(`Failed to initialize Gitv repository in ${utils.resolveAbsolutePath(pathOrFile)}. Error details:`, error.message);
     }
   })
 
