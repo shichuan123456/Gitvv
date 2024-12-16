@@ -108,8 +108,6 @@ class GitvIndex {
     }
 
     async writeObjects(content) {
-        console.log(222);
-        
         try {
             const objectsDir = utils.getResourcePath('objects');
             const blob = utils.sha1(content)
