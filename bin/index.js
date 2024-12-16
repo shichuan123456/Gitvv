@@ -21,10 +21,10 @@ program
   // 给init命令添加bare参数
   .option('--bare', 'Initialize a bare Gitv repository')
   // 当执行这个命令的时候会执行的回调函数，可接收命令行的参数
-  .action((directoryTarget, options) => {
+  .action(async (directoryTarget, options) => {
     // 具体的命令逻辑, 其中directoryTarget和options分别是该命令接收的参数和选项
     try {
-      gitv.init(directoryTarget, options)
+      await gitv.init(directoryTarget, options)
     } catch (error) { 
       console.error(`Failed to initialize Gitv repository in ${utils.resolveAbsolutePath(pathOrFile)}. Error details:`, error.message);
     }
@@ -36,10 +36,10 @@ program
   // 给命令添加描述，会在帮助中提示用户
   .description('Add files contents to the index')
   // 命令执行时的回调函数，并接收命令行的参数
-  .action((pathOrFile) => {
+  .action(async (pathOrFile) => {
     // 调用Gitv类的add实例方法
     try {
-      gitv.add(pathOrFile);
+      await gitv.add(pathOrFile);
     } catch (error) {
       // 在上一小节中，我们实现了resolveAbsolutePath方法，从而能够更精确地提供错误提示信息
       console.error(`Failed to add ${utils.resolveAbsolutePath(pathOrFile)} to the Gitv repository. Error details:`, error.message);

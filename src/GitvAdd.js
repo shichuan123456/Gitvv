@@ -18,7 +18,7 @@ class GitvAdd {
             // this.fileOrDirPath在上面构造函数中定义
             if (!utils.isSubdirectory(utils.getGitvWorkingDirRoot(), this.fileOrDirPath)) throw new Error("target file or path is outside gitv repository")
 
-            const files = await utils.collectFiles(this.gitvDir);
+            const files = await utils.collectFiles(this.fileOrDirPath);
             if (files.length === 0) throw new Error("not match any files");
             for (const file of files) {
                 await index.updateIndex(file);

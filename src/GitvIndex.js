@@ -1,11 +1,12 @@
 const fs = require("fs")
-const readline = require('readline');
+const fsPromise = fs.promises
+const readline = require('readline')
 const util = require('util');
-const writeFileAsync = util.promisify(fs.writeFile);
+const writeFileAsync = util.promisify(fs.writeFile)
 const utils = require("./Utils")
 const path = require("path")
-const zlib = require('zlib');
-const gzip = util.promisify(zlib.gzip);
+const zlib = require('zlib')
+const gzip = util.promisify(zlib.gzip)
 class GitvIndex {
     constructor() {
         this.indexPath = utils.getResourcePath('index');
@@ -13,24 +14,31 @@ class GitvIndex {
     // 读取 index 文件，返回一个包含 index 对象的 Promise
     async read() {
         try {
+            // 检查文件是否存在
+            await fsPromise.access(this.indexPath, fsPromise.constants.F_OK);
             // 存储索引文件内容的对象
             const idx = {};
             // 创建文件读取流
-            const fileStream = fs.createReadStream(this.indexPath);
+            const fileStream = fsPromise.createReadStream(this.indexPath);
             const rl = readline.createInterface({
                 input: fileStream,
             });
-
             // 逐行读取索引文件内容
             for await (const line of rl) {
-                if (!line) continue; // 跳过当前循环，不进行处理
+                if (!line) continue; // 跳过空行
                 const lineArray = line.split(/ /);
                 // 文件名和状态作为key唯一标识blob
                 idx[lineArray[0] + "," + lineArray[1]] = lineArray[2];
             }
             return idx;
         } catch (err) {
-            throw err;
+            if (err.code === 'ENOENT') {
+                // 如果错误代码是ENOENT，表示文件不存在
+                return {};
+            } else {
+                // 其他错误抛出
+                throw err;
+            }
         }
     }
 
@@ -100,6 +108,8 @@ class GitvIndex {
     }
 
     async writeObjects(content) {
+        console.log(222);
+        
         try {
             const objectsDir = utils.getResourcePath('objects');
             const blob = utils.sha1(content)
@@ -110,10 +120,10 @@ class GitvIndex {
 
             try {
                 // 检查文件夹是否存在
-                await fs.promises.access(folderPath)
+                await fsPromise.access(folderPath)
             } catch (err) {
                 // 如果文件夹不存在，则创建文件夹
-                await fs.promises.mkdir(folderPath)
+                await fsPromise.mkdir(folderPath)
             }
 
             // 构建文件路径

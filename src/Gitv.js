@@ -1,7 +1,7 @@
 const GitvInit = require("./GitvInit")
 
 
-// const GitvAdd = require("./GitvAdd")
+const GitvAdd = require("./GitvAdd")
 // const GitvRm = require("./GitvRm");
 // const GitvCommit = require("./GitvCommit");
 // const GitvClone = require("./GitvClone");

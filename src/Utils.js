@@ -128,7 +128,7 @@ class Utils {
     }
 
     // SHA-1 加密方法，调用encrypt对内容进行 SHA-1 加密
-    sha1 = (content) => encrypt('sha1', content)
+    sha1 = (content) => this.encrypt('sha1', content)
 
     createGitvObject = (content, type) => {
         // 获取content的字节长度  
