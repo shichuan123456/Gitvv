@@ -55,7 +55,7 @@ program
     try {
       await gitv.rm(fileOrPath, options)
     } catch (error) {
-      console.error(`Failed to remove ${utils.resolveAbsolutePath(pathOrFile)} from the Gitv repository. Error details:`, error.message);
+      console.error(`Failed to remove ${utils.resolveAbsolutePath(fileOrPath)} from the Gitv repository. Error details:`, error.message);
     }
   })
 

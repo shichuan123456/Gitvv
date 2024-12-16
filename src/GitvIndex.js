@@ -101,7 +101,7 @@ class GitvIndex {
             // 读取并转换索引数据
             const idx = utils.convertObject(await this.read());
             // 筛选存在于索引中的文件
-            return files.filter(file => idx.hasOwnProperty(path.relative(utils.getGittvWorkingDirRoot(), file.toString())));
+            return files.filter(file => idx.hasOwnProperty(path.relative(utils.getGitvWorkingDirRoot(), file.toString())));
         } catch (err) {
             throw err;
         }

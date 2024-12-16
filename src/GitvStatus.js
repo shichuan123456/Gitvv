@@ -136,9 +136,9 @@ class GitvStatus {
       const tocObj = (await index.read())
         .keys() // 获取索引中的所有键  
         .map(key => key.split(",")[0]) // 提取文件路径  
-        .filter(filePath => fs.existsSync(path.join(utils.getGivWorkingDirRoot(), filePath))) // 过滤存在文件  
+        .filter(filePath => fs.existsSync(path.join(utils.getGitvWorkingDirRoot(), filePath))) // 过滤存在文件  
         .reduce((obj, filePath) => {
-          const filePath = path.join(utils.getGivWorkingDirRoot(), filePath);
+          const filePath = path.join(utils.getGittvWorkingDirRoot(), filePath);
           const blobHash = utils.sha1(utils.createGitBlob(filePath));
           obj[filePath] = blobHash;
           return obj;

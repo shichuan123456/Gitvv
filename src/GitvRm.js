@@ -40,11 +40,10 @@ class GitvRm {
                     await fsPromise.unlink(filePath);
                 }
             }
-            // 获取需要删除的文件列表
-            const filesToRm = await index.filteredFiles(files);
-            filesToRm.forEach(async function (file) {
+            
+            files.forEach(async function (file) {
                 // 负责从索引中删除指定文件并更新索引
-                await index.deleteAndWrite(path.relative(utils.getGittvWorkingDirRoot(), file))
+                await index.deleteAndWrite(file)
             });
         } catch (err) {
             throw err;

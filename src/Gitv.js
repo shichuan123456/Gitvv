@@ -2,7 +2,7 @@ const GitvInit = require("./GitvInit")
 
 
 const GitvAdd = require("./GitvAdd")
-// const GitvRm = require("./GitvRm");
+const GitvRm = require("./GitvRm");
 // const GitvCommit = require("./GitvCommit");
 // const GitvClone = require("./GitvClone");
 // const GitvBranch = require("./GitvBranch");
@@ -36,7 +36,7 @@ class Gitv {
   async rm(fileOrPath, options) {
     try {
       this.gitvRm = new GitvRm(fileOrPath, options)
-      await this.gitvRm.gitRm()
+      await this.gitvRm.rm()
     } catch (err) {
       throw err;
     }
