@@ -19,7 +19,7 @@ class GitvIndex {
             // 存储索引文件内容的对象
             const idx = {};
             // 创建文件读取流
-            const fileStream = fsPromise.createReadStream(this.indexPath);
+            const fileStream = fs.createReadStream(this.indexPath);
             const rl = readline.createInterface({
                 input: fileStream,
             });
@@ -101,7 +101,7 @@ class GitvIndex {
             // 读取并转换索引数据
             const idx = utils.convertObject(await this.read());
             // 筛选存在于索引中的文件
-            return files.filter(file => idx.hasOwnProperty(path.relative(utils.getGivWorkingDirRoot(), file.toString())));
+            return files.filter(file => idx.hasOwnProperty(path.relative(utils.getGittvWorkingDirRoot(), file.toString())));
         } catch (err) {
             throw err;
         }

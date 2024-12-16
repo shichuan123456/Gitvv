@@ -51,9 +51,9 @@ program
   .description('Remove files from the working directory and the index')
   .option('--cached', 'Remove files from the index only')
   .option('-r', 'Recursively remove files and directories')
-  .action((fileOrPath, options) => {
+  .action(async (fileOrPath, options) => {
     try {
-      gitv.rm(fileOrPath, options)
+      await gitv.rm(fileOrPath, options)
     } catch (error) {
       console.error(`Failed to remove ${utils.resolveAbsolutePath(pathOrFile)} from the Gitv repository. Error details:`, error.message);
     }

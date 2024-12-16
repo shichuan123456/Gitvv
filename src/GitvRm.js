@@ -9,7 +9,7 @@ class GitvRm {
     constructor(pathOrfile, options) {
         this.pathOrfile = pathOrfile
         this.options = options
-        this.absolutePath = utils.resolveGitvRepoPath(this.pathOrfile)
+        this.absolutePath = utils.resolveAbsolutePath(this.pathOrfile)
     }
 
     async rm() {
@@ -22,7 +22,7 @@ class GitvRm {
             if (!utils.isInGitvRepo()) throw new Error("not a Gitv repository");
             // 不能是裸仓库
             if (utils.getRepositoryType() === "bare") throw new Error("this operation must be run in a Gitv work tree");
-            if (!utils.isSubdirectory(utils.getGivWorkingDirRoot(), this.absolutePath)) {
+            if (!utils.isSubdirectory(utils.getGitvWorkingDirRoot(), this.absolutePath)) {
                 throw new Error("target file or path is outside gitv repository");
             }
 
@@ -44,7 +44,7 @@ class GitvRm {
             const filesToRm = await index.filteredFiles(files);
             filesToRm.forEach(async function (file) {
                 // 负责从索引中删除指定文件并更新索引
-                await index.deleteAndWrite(path.relative(utils.getGivWorkingDirRoot(), file))
+                await index.deleteAndWrite(path.relative(utils.getGittvWorkingDirRoot(), file))
             });
         } catch (err) {
             throw err;

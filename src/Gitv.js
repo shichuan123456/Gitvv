@@ -33,10 +33,10 @@ class Gitv {
     }
   }
 
-  rm(fileOrPath, options) {
+  async rm(fileOrPath, options) {
     try {
       this.gitvRm = new GitvRm(fileOrPath, options)
-      this.gitvRm.gitRm()
+      await this.gitvRm.gitRm()
     } catch (err) {
       throw err;
     }
