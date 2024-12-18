@@ -3,9 +3,10 @@ const GitvInit = require("./GitvInit")
 
 const GitvAdd = require("./GitvAdd")
 const GitvRm = require("./GitvRm");
+const GitvBranch = require("./GitvBranch");
 // const GitvCommit = require("./GitvCommit");
 // const GitvClone = require("./GitvClone");
-// const GitvBranch = require("./GitvBranch");
+
 // const GitvRemote = require("./GitvRemote");
 // const GitvLog = require("./GitvLog");
 // const GitvStatus = require("./GitvStatus");

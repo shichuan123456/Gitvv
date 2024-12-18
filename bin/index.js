@@ -59,6 +59,22 @@ program
     }
   })
 
+program
+  .command('branch [branchName]')
+  .description('Manage branches within the local Git repository')
+  .option('-r, --remote', 'List all remote branches')
+  .option('-v, --verbose', 'Be verbose and show commit details along with branch names')
+  .option('-a, --all', 'List all branches, both local and remote')
+  .option('-D, --delete', 'Delete an existing branch (must be merged or force with -D)') //TODO
+  .option('-m, --move <newBranch>', 'Rename a branch')
+  .action((branchName, options) => {
+    try {
+      gitv.branch(branchName, options);
+    } catch (err) {
+      console.error(`Failed to create or modify the branch '${branchName}' in the Gitv repository. Error details:`, err);
+    }
+  });
+
 // program
 //   .command('commit')
 //   // 添加 -m 或 --message 选项，并设置描述
@@ -78,21 +94,7 @@ program
 //     }
 //   })
 
-// program
-//   .command('branch [branchName]')
-//   .description('Manage branches within the local Git repository')
-//   .option('-r, --remote', 'List all remote branches')
-//   .option('-v, --verbose', 'Be verbose and show commit details along with branch names')
-//   .option('-a, --all', 'List all branches, both local and remote')
-//   .option('-D, --delete', 'Delete an existing branch (must be merged or force with -D)') //TODO
-//   .option('-m, --move <newBranch>', 'Rename a branch')
-//   .action((branchName, options) => {
-//     try {
-//       gitv.branch(branchName, options);
-//     } catch (err) {
-//       console.error(`Failed to create or modify the branch '${branchName}' in the Gitv repository. Error details:`, err);
-//     }
-//   });
+
 
 // program
 //   .command('remote [url]')
