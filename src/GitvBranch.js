@@ -26,6 +26,7 @@ class GitvBranch {
             // 重命名一个分支  
             renameBranch: (branchName, newBranch) => this.renameBranch(branchName, newBranch),
         };
+
         // 根据传入的选项确定要执行的操作  
         let action = this.options.delete ? 'deleteBranch' :
             this.options.move ? 'renameBranch' :
@@ -46,8 +47,7 @@ class GitvBranch {
             gitvBranchActions[action](...(action === 'renameBranch' ? [this.branchName, this.options.move] : [this.branchName]));
 
         } else {
-            // 如果没有确定的操作，则打印错误信息  
-            console.error('Invalid command: Please provide a valid git branch command');
+            throw new Error('Invalid command: Please provide a valid git branch command');  
         }
     }
 

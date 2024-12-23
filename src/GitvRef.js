@@ -12,7 +12,7 @@ class GitvRef {
         // HEAD文件的路径
         this.headFilePath = utils.getResourcePath('HEAD');
     }
-
+    // TODO 这块定义了两个headFilePath，后面更具情况进行修改
     static headFilePath = path.join(utils.getResourcePath(), 'HEAD')
 
     async localHeads() {

@@ -68,6 +68,7 @@ program
   .option('-D, --delete', 'Delete an existing branch (must be merged or force with -D)') //TODO
   .option('-m, --move <newBranch>', 'Rename a branch')
   .action((branchName, options) => {
+    // 调用branch方法，文章下面会进行模块的功能添加 
     try {
       gitv.branch(branchName, options);
     } catch (err) {

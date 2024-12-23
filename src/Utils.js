@@ -270,7 +270,6 @@ class Utils {
     async readAllFilesInDirectory(dirPath, cb) {
         try {
             // 读取目录中的所有文件和子目录  
-
             const files = await fsPromise.readdir(dirPath, {
                 withFileTypes: true
             });

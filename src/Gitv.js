@@ -53,10 +53,10 @@ class Gitv {
     this.gitvClone.clone();
   }
 
-  branch(branchName, options) {
+  async branch(branchName, options) {
     try {
       this.gitvBranch = new GitvBranch(branchName, options)
-      this.gitvBranch.branch();
+      await this.gitvBranch.branch();
     } catch (err) {
       throw error
     }
