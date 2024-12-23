@@ -60,9 +60,7 @@ class GitvRef {
             });
             await this.displayRemotesBranches(fileContents);
         } catch (err) {
-            // 捕获并处理错误  
-            console.error('读取本地分支目录时发生错误:', err);
-            throw err; // 重新抛出错误，以便调用者可以处理它  
+            throw err;
         }
     }
 
@@ -92,6 +90,8 @@ class GitvRef {
 
             // 创建新的分支文件，并写入commit hash  
             await fsPromise.writeFile(path.join(this.localBranchesDir, `${branchName}`), commitHash.trim(), 'utf8');
+            // 方法结束，新分支创建成功  
+            console.log(`新分支 ${branchName} 创建成功`);
         } catch (error) {
             throw error; // 重新抛出错误，以便上层调用者可以处理  
         }
@@ -117,8 +117,7 @@ class GitvRef {
                 // 如果不是分离状态，并且尝试删除的分支是当前检出的分支  
                 if (branchName === headBranchName) {
                     // 输出错误信息，并停止执行  
-                    console.error(`error: Cannot delete branch '${branchName}' because it is currently checked out.`);
-                    return; // 提前返回，不执行删除操作  
+                    throw new Error(`error: Cannot delete branch '${branchName}' because it is currently checked out.`);
                 }
             }
 
@@ -130,7 +129,7 @@ class GitvRef {
         } catch (error) {
             // 检查是否是ENOENT错误，即文件或目录不存在  
             if (error.code === 'ENOENT') {
-                console.warn(`Branch '${branchName}' does not exist, so it cannot be deleted.`);
+                throw new Error(`Branch '${branchName}' does not exist, so it cannot be deleted.`);
             } else {
                 throw error;
             }
@@ -188,7 +187,6 @@ class GitvRef {
 
     // 修改引用名称（分支）
     async renameRef(branchName, newBranch) {
-        console.log(branchName, newBranch, "------------------------------");
         try {
             // 获取当前HEAD指向的分支名  
             const headBranchName = await this.headBranchName();
@@ -197,20 +195,17 @@ class GitvRef {
             if (!(await this.isHeadDetached())) {
                 // 如果不是分离状态，并且尝试删除的分支是当前检出的分支  
                 if (branchName === headBranchName) {
-                    // 输出错误信息，并停止执行  
-                    console.error(`error: Cannot delete branch '${branchName}' because it is currently checked out.`);
-                    return; 
+                    throw new Error(`error: Cannot rename branch '${branchName}' because it is currently checked out.`);
                 }
             }
-            // 重命名文件，接下来会实现
+
+            if (!this.isExistRef(this.branchName)) {
+                throw new Error(`Branch named ${this.branchName} not found, or does not exist.`);
+            }
+            // 重命名文件
             renameFileIfExists(this.localBranchesDir, branchName, newBranch);
         } catch (error) {
-            // 检查是否是ENOENT错误，即文件或目录不存在  
-            if (error.code === 'ENOENT') {
-                console.error(`Branch '${branchName}' does not exist, so it cannot be deleted.`);
-            } else {
-                throw error; 
-            }
+            throw error;
         }
     }
     // 异步方法用于获取指定分支的哈希值
@@ -240,6 +235,31 @@ class GitvRef {
             throw error;
         }
     }
+
+    renameFileIfExists(folderPath, oldFileName, newFileName) {  
+        // 构建文件的完整路径  
+        const oldFilePath = path.join(folderPath, oldFileName);  
+        const newFilePath = path.join(folderPath, newFileName);  
+        
+        // 检查文件是否存在  
+        fs.access(oldFilePath, fs.constants.F_OK, (err) => {  
+          if (err) {
+            // 如果文件不存在，则报错  
+            throw new Error(`文件 ${oldFileName} 在文件夹 ${folderPath} 中不存在`);   
+          } else {  
+            // 如果文件存在，则进行重命名  
+            fs.rename(oldFilePath, newFilePath, (renameErr) => {  
+              if (renameErr) {  
+                // 如果重命名过程中发生错误，则报错  
+                throw new Error(`重命名文件 ${oldFileName} 到 ${newFileName} 时出错:`, renameErr);  
+              } else {  
+                // 重命名成功  
+                console.log(`文件 ${oldFileName} 已重命名为 ${newFileName}`);  
+              }  
+            });  
+          }  
+        });  
+      }
 
     // async getBranchHash(branch = 'HEAD') {
     //     let refPath = `${this.headFilePath}`;
