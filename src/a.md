@@ -1,276 +1,177 @@
-上小节中，我们成功实现了不带任何选项的`gitv branch`命令功能，接下来，我们将继续探索并实现其它核心功能。
+在`Git`中，当你准备提交更改时，需要确保所有想要提交的修改都已通过`git add`命令添加到暂存区。`Git`只记录暂存区的文件变化，因此，任何未通过`git add`暂存的修改在提交时都将被忽略，并只保留在本地磁盘上。为确保提交包含所有预期的更改，可以遵循以下步骤：
 
-## 实现 `gitv branch -r`
+1. **检查修改**：使用`git status`命令查看当前工作目录的状态，包括已修改、已添加和未跟踪的文件（该命令我们后面会实现）。
+2. **暂存文件**：对于想要包含在提交中的每个已修改文件，使用`git add <文件名>`命令将其添加到暂存区。
+3. **提交更改**：一旦所有必要的文件都已暂存，使用`git commit -m "提交信息"`命令提交更改。确保在引号内提供有意义的提交信息，以描述所做的更改。
 
-该命令会显示所有的远程跟踪分支（remote-tracking branches）。这些分支是本地仓库中对远程仓库分支的引用，通常用于追踪远程分支的变更。
+在`Git`中，每次`Commit`操作都是对代码库当前状态的一个完整快照，它记录下了所有已暂存的文件变更。这些变更被封装成一个对象，并赋予一个唯一的哈希值，这个哈希值在`Git`中用作该提交的标识符。通过这一机制，我们可以轻松地回溯到历史中的任意版本，查看或恢复特定时间点的代码状态。
 
-- 读取本地仓库的 `./refs/remotes/` 目录下的所有文件。
-- 遍历每个远程仓库的子目录（如 origin），并读取其中的文件。
-- 将文件名和文件内容作为远程跟踪分支的信息。
+现在，我们正式踏上探索`Commit`的旅程，携手共进，一同深入学习和实现`gitv commit`命令的精髓与细节。
 
-   实现了`git branch`命令后，`git branch -r`的命令相对会好实现很多，大部分实现是一致的，在`refs/remotes/`下面可能会有多个远程仓库链接(对应多个不同的子文件夹)，这个在我们上面实现遍历文件夹下面所有文件的`readAllFilesInDirectory`时候已经实现。但是有一点需要注意是有的时候这些远程仓库下可能会有HEAD文件用来指向远程仓库的默认分支（我们在进行`git clone`的时候就会出现这个文件），而且它的展现形式会类似于下面（我们以远程仓库的默认名称origin为例）：
-    ```js
-    remotes/origin/HEAD -> origin/master
+## **git commit的使用**
+
+*   基本用法
+
+    ```sh
+    git commit -m "commit message"
     ```
-   - 如果HEAD文件中存放的是commit的hash值，则直接显示hash
-   - 如果HEAD中存放的是ref（ref: refs/remotes/origin/master），我们会截取出origin/master。
-   - 指针左边显示的不再是文件名，而是`remotes/origin/HEAD`
 
-   ```js
-   async remotesHeads(){
-        try {
-            // 读取本地分支目录中的所有文件，并返回文件名和内容组成的对象数组  
-            const fileContents = []
-            await utils.readAllFilesInDirectory(this.remoteBranchesDir, async (name, content, filePath) => {
-                if (name === 'HEAD' && content.startsWith('ref: ')) {
-                        // 如果是HEAD文件且内容以ref:开头  
-                        const refPath = content.substring('ref: '.length).trim();  
-                        // 提取ref指向的部分，例如/origin/master  
-                        const refTarget = refPath.split('/').slice(2).join('/');   
-              
-                        // 使用path.dirname获取文件的父级目录  
-                        const parentDir = path.basename(path.dirname(filePath)); 
-                        const headRelativePath = path.join('remotes', '/', parentDir ,'HEAD'); 
-                        // 将refTarget作为内容，并包含HEAD文件的相对路径  
-                        fileContents.push({ name: headRelativePath, content: refTarget });  
-                      } else {  
-                        // 对于非HEAD文件或HEAD内容不是ref，直接包含文件名、路径和内容  
-                        fileContents.push({ name: name, content });  
-                      }
-            });
-            // 这个方法是远程分支引用的格式化方法，我们会在下面实现
-            await this.displayRemotesBranches(fileContents);
-        } catch (err) {
-            // 捕获并处理错误  
-            console.error('读取本地分支目录时发生错误:', err);
-            throw err; // 重新抛出错误，以便调用者可以处理它  
-        }
-    }
-
-   ```
-  在处理HEAD文件的特殊需求时，我们巧妙地运用了`readAllFilesInDirectory`方法的第二个回调机制，这充分展示了该方法的灵活性和强大的扩展性。本质没有什么变化，只是对于展现形式做了定制化的处理，还有需要特别注意的一点是回调函数接收了第三个参数：文件的路径，我们需要在readAllFilesInDirectory方法中进行添加，也就是说所有我们需要的信息都可以通过回调的参数进行传递，非常方便。
-
- - 格式化输出远程跟踪分支列表
-
-```js
-     displayRemotesBranches(filesObj) {  
-        filesObj.forEach(({name, content}) => {
-            const isHead = name.indexOf("HEAD"); // 判断当前文件  
-            if (isHead != -1) {
-                console.log(`${name}  ---> ${content}`); // 输出文件名即可
-            } else {
-                console.log(`${name}`)
-            }     
-        })
-    }
-```
-到此为止，我们`gitv branch -r`的核心功能都已经实现，下面我们看下这个方法的调用。
-```js
-// src/GitvBranch
-async getRemoteBranches() {
-     await this.ref.remotesHeads()
-}
-```
-在上一节中，我们已经通过状态模式对`gitv branch`命令的各种选项功能调用进行了封装，因此，在本节中，我们只需专注于编写`getRemoteBranches`方法。具体的实现细节已经被封装到了`Ref`类中的`remotesHeads`方法中，这确保了我们的代码逻辑清晰、易于维护。通过这种封装方式，我们不仅能够提高代码的可读性和可复用性，还能确保功能的稳定性和可靠性。
-
-## 实现 `gitv branch -a`
-
-使用 -a 选项（代表“all”），git branch 命令将同时显示所有的本地分支和远程跟踪分支。这样，你可以在一个命令的输出中看到仓库的所有分支信息。
--  执行 `git branch` 命令获取并格式化输出本地分支列表。
--  执行 `git branch -r` 命令获取并格式化输出远程跟踪分支列表。
-
-```js
-  // src/GitvRef.js
-  async getAllBranches() {
-      await this.getLocalBranches()
-      await this.getRemoteBranches()
-  }
-  ```
-## 实现 `git branch new-feature`
-
-- 检查当前所在的分支，记录其哈希值。
-- 在 .git/refs/heads/ 目录下创建一个新文件 new-feature，文件内容为当前分支的哈希值。
-```js
-// 创建一个新的引用（分支）  
-    async createRef(branchName) {
-        try {
-            // 获取当前HEAD指向的分支名  
-            const headBranchName = await this.headBranchName();
-
-            // 初始化commitHash为当前HEAD指向的分支名，如果HEAD是分离的，则这个值就是commit的hash  
-            let commitHash = headBranchName;
-
-            // 检查当前HEAD是否处于分离状态  
-            if (!(await this.isHeadDetached())) {
-                // 如果不是分离状态，读取HEAD指向的分支对应的commit hash  
-                commitHash = await fsPromise.readFile(path.join(this.localBranchesDir, `${headBranchName}`), 'utf8');
-            }
-
-            // 创建新的分支文件，并写入commit hash  
-            await fsPromise.writeFile(path.join(this.localBranchesDir, `${branchName}`), commitHash.trim(), 'utf8');
-
-            // 方法结束，新分支创建成功  
-            console.log(`新分支 ${branchName} 创建成功`);
-        } catch (error) {
-            // 捕获并处理异常  
-            console.error(`创建分支 ${branchName} 时发生错误:`, error); 
-            throw error; // 重新抛出错误，以便上层调用者可以处理  
-        }
-    }
-```
-在Ref中封装了`createRef`方法后，我们就可以在`Gitbranch`中进行调用了，如下：
-  ```js
-    async addBranch(branchName) {
-        await this.ref.createRef(branchName);
-    }
-  ```
-## 实现 `git branch -D branch-name`
-
-- 无需检查 branch-name 分支的合并状态。
-- 当前分支如果是要被删除的分支，报错提示用户。
-- 如果被删除的分支不存在，同样提示用户。
-- 直接删除 ./refs/heads/branch-name 文件。
-  ```js
-     // 异步删除引用（分支）  
-    async deleteRef(branchName) {
-        try {
-            // 获取当前HEAD指向的分支名  
-            const headBranchName = await this.headBranchName();
-
-            // 检查当前HEAD是否处于分离状态  
-            if (!(await this.isHeadDetached())) {
-                // 如果不是分离状态，并且尝试删除的分支是当前检出的分支  
-                if (branchName === headBranchName) {
-                    // 输出错误信息，并停止执行  
-                    console.error(`error: Cannot delete branch '${branchName}' because it is currently checked out.`);
-                    return; // 提前返回，不执行删除操作  
-                }
-            }
-
-            // 尝试删除分支文件  
-            await fsPromise.unlink(path.join(this.localBranchesDir, `${branchName}`));
-
-            // 分支删除成功  
-            console.log(`Branch '${branchName}' has been deleted successfully.`);
-        } catch (error) {
-            // 检查是否是ENOENT错误，即文件或目录不存在  
-            if (error.code === 'ENOENT') {
-                console.warn(`Branch '${branchName}' does not exist, so it cannot be deleted.`);
-            } else {
-                // 对于其他类型的错误，记录错误信息并可能向上层抛出  
-                console.error(`An error occurred while trying to delete branch '${branchName}':`, error);
-                // 可以选择是否抛出错误  
-                // throw error;  
-            }
-        }
-    }
-  ```
-针对上述提到的两点检测——被删除的分支是当前分支、被删除的分支不存在，我们进行了相应的检测，并在发现这两种情况时，分别向用户输出明确的报错提示。这样做确保了删除操作的准确性和安全性同时为用户提供了更好的使用体验，并降低了在删除分支时可能发生的错误风险。
-同样我们看下在`Gitbranch`中进行调用了，如下：
-```js
- async deleteBranch(branchName) {
-      await this.ref.deleteRef(branchName);
- }
-```
-## 实现 `git branch -m branch-name`
-1.  **检查当前分支**：  
-    确保用户不是要重命名当前所在的分支，因为 Git 不允许这样做。
+    最常用的提交命令如上所示，该命令用于将暂存区中的改动提交到本地仓库，并创建一个新的提交对象。通过`-m`参数添加一个提交信息，还会有下面这种用法：
     
-1.  **如果仓库处于头指针分离状态，报错提示用户**：  
-    当你处于分离 HEAD 状态时，Git 不允许你重命名分支。
+    ```js
+    git commit -am "commit message"
+    ```
 
-1.  **检查分支是否存在**：  
-    读取 `./refs/heads/` 目录下的文件，检查用户提供的旧分支名是否存在。
+    `-a`选项表示"暂存所有已跟踪的文件"，`Git`会在提交之前自动暂存你对已经跟踪的文件所作的所有修改。需要注意的是，这个选项不会自动暂存新创建的文件，只对已经跟踪的文件有效。
 
-1.  **重命名分支**：  
-    如果旧分支存在，并且不是当前分支，那么执行重命名操作：
+*   修改最后一次`commit`
 
-    -   读取旧分支的引用文件（`./refs/heads/old-branch-name`）。
-    -   将旧分支的引用文件内容写入新的引用文件（`./refs/heads/new-branch-name`）。
-    -   删除旧的引用文件。
+    ```sh
+    git commit --amend
+    ```
 
-1.  **更新引用日志**：  
-    如果 Git 仓库启用了引用日志（默认是启用的），你可能还需要更新 `./logs/refs/heads/old-branch-name` 和创建或更新 `./logs/refs/heads/new-branch-name`。我们暂不实现
+    如果你需要修改最后一次提交的消息或者添加新的变更，可以使用 `--amend` 选项。这将会打开文本编辑器，允许你编辑上一次的提交信息。你可以在这个编辑器中修改、增加或删除提交信息，保存并关闭编辑器后，`Git`就会使用你新编辑的提交信息来替换上一次的提交信息。这个命令需要特别注意以下两点：
+    - `git commit --amend` 不仅会修改提交信息，还会把暂存区中的当前更改包含到这次提交中。如果你只想修改提交信息而不包含任何新的更改，确保在运行命令之前，暂存区是干净的（即没有新的未提交的更改）
+    - 如果你已经将上一次的提交推送到远程仓库，使用 `git commit --amend` 修改提交后，你需要使用 `git push --force` 来更新远程仓库中的提交。但是，强制推送可能会覆盖其他人的工作，因此在团队环境中使用时要特别小心，确保不会破坏团队的协作流程。在推送之前，最好先与团队成员沟通，确保没有其他人正在基于你之前的提交工作。
 
-1.  **错误处理**：  
-    如果在上述过程中遇到任何问题（例如，当前分支就是要被重命名的分支，或者旧分支不存在），则向用户显示错误消息。
-  ```js
-     // 异步删除引用（分支）  
-    async renameRef(branchName) {
-        try {
-            // 获取当前HEAD指向的分支名  
-            const headBranchName = await this.headBranchName();
+## **`Commit`对象的核心特性**
 
-            // 检查当前HEAD是否处于分离状态  
-            if (!(await this.isHeadDetached())) {
-                // 如果不是分离状态，并且尝试删除的分支是当前检出的分支  
-                if (branchName === headBranchName) {
-                    // 输出错误信息，并停止执行  
-                    console.error(`error: Cannot delete branch '${branchName}' because it is currently checked out.`);
-                    return; // 提前返回，不执行删除操作  
-                }
-            }
-            // 重命名文件，接下来会实现
-            renameFileIfExists(folderPath, oldFileName, newFileName);
-            // 分支删除成功  
-            console.log(`Branch '${branchName}' has been deleted successfully.`);
-        } catch (error) {
-            // 检查是否是ENOENT错误，即文件或目录不存在  
-            if (error.code === 'ENOENT') {
-                console.warn(`Branch '${branchName}' does not exist, so it cannot be deleted.`);
-            } else {
-                // 对于其他类型的错误，记录错误信息并可能向上层抛出  
-                console.error(`An error occurred while trying to delete branch '${branchName}':`, error);
-                // 可以选择是否抛出错误  
-                // throw error;  
-            }
-        }
-    }
-  ```
-下面我们着重封装下`renameFileIfExists`，该方法用来检查文件是否存在，并进行重命名。
+*   版本追踪
+
+    `Commit`对象是`Git`的基本单位，它不仅是记录代码变更的基本单位，更是开发者追踪代码库演变历史、回溯至特定版本、以及审查代码状态的重要工具。
+
+    ```sh
+    git log
+    ```
+    
+    上述命令将显示一个包含所有`commit`历史记录的列表，包括每个`commit`的作者、日期、提交消息等信息。
+
+*   分支管理
+    
+    分支管理是`Git`版本控制系统中的核心功能，而`Commit`则是分支得以存在的基础。在`Git`中，每次创建分支或切换分支时，都是基于某个特定的`Commit`点来操作的。分支代表着独立的代码线，它为团队成员提供了一个在不影响主线开发的情况下进行工作的空间。
+
+    ```sh
+    git checkout <commitId> 
+    git switch <commitId>     
+    ```
+
+    上面两个命令都用于在 `Git` 版本控制系统中切换分支，这两个命令都能让你从当前所在的分支切换到另一个指定的分支，从而能够查看、修改或提交该分支上的代码。在日常使用中，`git switch` 通常更受推荐，因为它提供了更严格的未提交修改管理机制，有助于避免潜在的合并问题。
+     
+*   代码审查
+
+    由于每个`Commit`都记录了一系列变更，团队成员可以方便地进行代码审查。审查者可以通过检查每个`Commit`的变更内容，提出建议或指出潜在问题。
+   
+    ```js
+    git diff <commit1> <commit2>
+    ```
+    
+    该命令是一个用于比较两个不同提交之间差异的 `Git` 命令。当你执行这个命令时，`Git` 会显示出从 `<commit1>` 到 `<commit2>` 之间所有变更的详细信息。
+*   合并分支
+
+    通过`commit`，可以将不同分支上的代码合并到一起。这有助于整合不同功能的开发或者解决分支间的代码冲突。
+
+    ```js
+    git merge <branch_name>
+    ```
+
+    该命令用于将指定分支的更改合并到当前分支。它创建一个新的合并提交，包含两个分支的修改内容，使得两个分支的历史合并到一起。
+      
+## **`Commit`对象的内容解析**
+
+`Commit`是一个引用，它指向一个对象，这个对象的内容主要包含以下三个方面，通过这个引用和它所指向的对象，我们能够完整记录代码库的状态变化，实现版本控制的核心功能。
+
+-   代码快照
+
+    每个`Commit`都包含了一个完整的代码快照，记录了工作目录的状态。这确保了每个版本都是可复现的，能够在需要时进行回滚或者查看。
+
+*   元数据
+
+    除了代码快照，每个`Commit`还包含了一些元数据，如作者、提交时间、提交消息等。这些信息有助于理解代码的演进过程和维护项目历史。
+
+*   父节点引用
+
+    在Git中，每个`Commit`都包含了对其父节点（前一次`Commit`）的引用。这种引用关系形成了一颗有向无环图，描述了整个代码库的历史。
+
+## **git commit命令实现**
+
+### 概述实现目标
+
+`git commit`的实现原理主要基于`Git`的内部对象模型，特别是提交对象（`commit object`）和树对象（`tree object`）的创建与关联。每次提交都会创建一个新的提交对象，该对象包含当前暂存区（`index`）的状态（通过树对象表示）、提交者信息、提交时间戳、提交信息以及指向父提交对象的引用。这些对象被存储在`Git`仓库的对象数据库中，并通过唯一的哈希值进行标识。通过更新当前分支的引用（如`HEAD`），指向新的提交对象，从而建立起版本历史链。
+
+### 命令实现详解
+1.  **初始化命令结构**：
+同构建其他命令相同，我们首先需要在 `bin/index.js` 文件中定义 `gitv commit` 命令及其相关选项。确保用户能够通过命令行界面（`CLI`）直接使用 `gitv commit` 命令。
 ```js
- renameFileIfExists(folderPath, oldFileName, newFileName) {  
-  // 构建文件的完整路径  
-  const oldFilePath = path.join(this.localBranchesDir, oldFileName);  
-  const newFilePath = path.join(this.localBranchesDir, newFileName);  
-  
-  // 检查文件是否存在  
-  fs.access(oldFilePath, fs.constants.F_OK, (err) => {  
-    if (err) {  
-      // 如果文件不存在，则报错  
-      console.error(`文件 ${oldFileName} 在文件夹 ${folderPath} 中不存在`);  
-      process.exit(1);  
-    } else {  
-      // 如果文件存在，则进行重命名  
-      fs.rename(oldFilePath, newFilePath, (renameErr) => {  
-        if (renameErr) {  
-          // 如果重命名过程中发生错误，则报错  
-          console.error(`重命名文件 ${oldFileName} 到 ${newFileName} 时出错:`, renameErr);  
-          process.exit(1); 
-        } else {  
-          // 重命名成功  
-          console.log(`文件 ${oldFileName} 已重命名为 ${newFileName}`);  
-        }  
-      });  
-    }  
-  });  
+// bin/index.js
+program
+  .command('commit')
+  // 添加 -m 或 --message 选项，并设置描述
+  .option('-m, --message <message>', 'commit message')
+  // 添加命令描述
+  .description('Record changes to the repository')
+  .action((options) => {   
+    try {
+      // 检查 -m 参数是否已提供并且不为空 
+      if (!options.message || options.message.trim() === '') {
+        console.error('Error: Commit message is required and cannot be empty.');
+        process.exit(1); // 退出程序并返回错误码 1  
+      }
+      gitv.commit(options);
+    } catch (err) {
+      console.error(`Failed to commit changes to the Gitv repository. Error details:`, err);
+    }
+  })
+```
+在标准的`Git`中，当你执行提交操作（如`git commit`）但没有使用`-m`或`--message`参数来直接指定提交信息时，`Git`会启动一个文本编辑器（通常是用户在`Git`配置中指定的默认编辑器）并打开一个名为`COMMIT_EDITMSG`的文件，以允许用户交互式地输入并提交他们的提交信息。
+
+然而，在我们设计的`gitv`命令行工具中，为了简化用户体验和保持一致性，我们并没有实现这种交互式模式。如果用户在执行提交操作时不提供提交信息（即未使用-m参数），gitv会立即报错，并提示用户需要使用-m参数来明确指定提交信息。
+
+1. 添加功能模块
+
+业务功能需要封装在各自的类模块中，所以我们新建`src/GitvCommit.js`文件，并初始化`GitvCommit`类：
+
+```js
+// src/GitvCommit.js
+class GitvCommit { 
+    constructor({message}) {
+        // 接收命令参数
+        this.commitMsg = message;
+    }
+    // 具体实现commit命令的业务逻辑
+    commit() {
+    }
+}
+module.exports = GitvCommit;
+```
+
+下面我们在`Gitv`中实例化`GitvCommit`并调用`commit`方法实现该功能:
+
+  ```js
+// Gitv.js
+const GitvCommit = require("./GitvCommit");
+
+class Gitv {
+  // ...
+  commit(options) {
+    try{
+        this.gitvCommit  = new GitvCommit(options)
+        this.gitvCommit.commit()
+    } catch(err) {
+        throw err
+    }
+ }
 }
 ```
-同样我们看下在`Gitbranch`中进行调用了，如下：
-```js
- async renameBranch(branchName) {
-      await this.ref.renameRef(branchName);
- }
-```
+我们已经完成了`Gitv`命令行工具的主体框架代码，接下来，在下一小节中，我们需要专注于实现`GitvCommit`类中的`commit`实例方法，以确保提交功能的正常运行。
+
 ## 总结
-在本次学习活动中，我们实现了多个Git分支相关的命令，包括列出远程分支、列出所有分支、创建新分支和强制删除分支。这些功能都是Git版本控制系统中非常基础和重要的部分，对于团队协作和项目管理至关重要。
 
-首先，我们实现了`gitv branch -r`命令来列出所有远程分支。这个命令帮助用户了解当前仓库中有哪些远程分支，这对于跟踪和同步远程仓库的变化非常有用。
+`git commit`负责将用户的代码改动以版本的形式保存下来，以便于后续的代码追踪、回滚和协作开发。本文将从使用、核心功能、内容解析、需求分析、实现目标以及命令实现详细剖析等方面对`git commit`进行深入的探讨。
 
-接着，我们实现了`gitv branch -a`命令，用于列出所有分支，包括本地和远程分支。这个命令提供了更全面的分支信息，方便用户进行全面的分支管理。
+首先，从使用角度来看，提交命令允许用户将暂存区中的文件改动提交到仓库中，形成新的版本记录。通过附带提交信息，用户能够清晰地描述每次提交的目的和内容，便于团队成员之间的沟通和协作。
 
-然后，我们实现了`git branch new-feature`命令来创建新的分支。这个命令允许用户根据当前工作创建新的分支，以便进行新功能的开发或修复bug，同时保持主分支的稳定性。
+在内容解析方面，每次执行提交命令时，`Git`都会生成一个包含丰富信息的提交对象。这些信息包括提交者的姓名和邮箱地址、提交时间戳、提交信息以及树对象等。其中，提交信息尤为重要，它为用户提供了描述和解释改动内容的平台，有助于团队成员理解每次提交的背景和目的。
 
-此外，我们还实现了`git branch -D branch-name`命令，用于强制删除一个分支。这个命令在分支不再需要或者需要重置时非常有用，但需要注意的是，强制删除分支会丢失该分支上的所有未合并的提交，因此在使用时需要谨慎。
+最后，在命令实现详细剖析部分，我们搭建了基础的框架，下小节我们将深入探讨`gitv commit`命令的实现过程。这包括收集暂存区改动的机制、提交对象的构建方法、对象数据库的写入策略以及分支引用的更新逻辑等。通过对这些关键步骤的详细剖析实现，我们可以更加深入地理解`git commit`的工作原理，为后续的优化和扩展提供有力的支持。
 
-虽然我们在本次学习中没有实现合并分支和检出分支的功能，但这些都是Git分支管理中非常重要的部分。合并分支可以将不同分支上的更改合并到一起，实现代码的集成；而检出分支则允许用户切换到不同的分支进行工作。这些功能将在后续的学习中逐步实现，以完善我们的Git分支管理系统。
+敬请期待下一小节，我们将深入探索提交功能的精彩实现细节。通过具体的代码实现，我们将揭开`Git`提交背后的工作原理的神秘面纱。
