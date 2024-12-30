@@ -214,9 +214,6 @@ class GitvRef {
     getBranchHash(filePath) {
         try {
             const headContent = fs.readFileSync(filePath || this.headFilePath, 'utf8');
-            // console.log('Reading file:', filePath);
-            // console.log('Content:', headContent);
-
             // 检查HEAD是否直接是一个合法的hash值
             if (/^[0-9a-f]{40}$/.test(headContent)) {
                 return headContent; // 返回哈希值字符串

@@ -10,12 +10,14 @@ class GitvLog {
     async log() {
         // 必须是Gitv仓库
         if (!utils.isInGitvRepo()) throw new Error("not a Gitv repository");
-        // 不能是裸仓库
-        if (utils.getRepositoryType() === "bare") throw new Error("this operation must be run in a Gitv work tree");
 
+        // 接受 -n 参数，默认没有限制
         const n = this.options.number || Number.MAX_SAFE_INTEGER
+        
+        // 获取到 commit 提交记录
         const commits = this.getCommits(n)
 
+        // 打印 commit 提交记录
         this.printLogs(commits, this.options.oneline)
     }
 

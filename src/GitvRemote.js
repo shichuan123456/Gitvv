@@ -10,26 +10,29 @@ class GitvRemote {
     }
 
     async remote() {
-        // 必须是Gitv仓库
-        if (!utils.isInGitvRepo()) throw new Error("not a Gitv repository");
-        console.log(`gitv remote execute ${this.url}----${JSON.stringify(this.options)}`);
         const gitvRemoteActions = {
+            // 获取远程仓库名称并显示
             getRemoteNames: async () => this.displayRemoteNames(),
-            getRemoteDetails: () => this.getRemoteDetails(),
+            // 获取远程仓库的详细信息
+            getRemoteDetails: () => this.displayRemoteDetails(),
+            // 添加一个新的远程仓库
             addNewRemote: (remoteName, url) => this.manageRemote('add', {
                 remoteName
             }, url),
+            // 删除一个远程仓库
             removeRemote: (remoteName) => this.manageRemote('remove', {
                 remoteName
             }),
+            // 设置（或更新）一个远程仓库的URL
             setRemote: (remoteName, url) => this.manageRemote('set', {
                 remoteName
             }, url),
+            // 重命名一个远程仓库
             renameRemote: (remoteName, newName) => this.manageRemote('rename', {
                 remoteName
             }, newName),
         };
-
+        // 如果根据options确定了要执行的操作，则调用相应的函数
         const action = this.options.add ? 'addNewRemote' : this.options.remove ? 'removeRemote' : this.options.setUrl ? 'setRemote' : this.options.rename ? 'renameRemote' : this.options.verbose ? 'getRemoteDetails' : !this.url && Object.keys(this.options).length === 0 ? 'getRemoteNames' : null;
         if (action) {
             gitvRemoteActions[action](this.options, this.url);
@@ -38,29 +41,30 @@ class GitvRemote {
         }
     }
 
-    getRemoteNames() {
+    parseRemoteNamesFromConfig() {
         try {
-            const config = this.config.read()
+            const config = this.config.read();
             // 确保config对象存在且包含remote属性
             if (config && config.remote) {
-                // 使用Object.keys()获取remote对象下的所有键  
+                // 使用Object.keys()获取remote对象下的所有键（即远程仓库的名称）
                 return Object.keys(config.remote);
             } else {
-                return [];
+                return []; // 如果没有远程仓库配置，则返回一个空数组
             }
         } catch (err) {
-            throw err
+            throw err; // 如果读取配置时出错，则抛出异常
         }
     }
 
     displayRemoteNames() {
-        const remoteNames = this.getRemoteNames();
+        // 获取远程仓库名称
+        const remoteNames = this.parseRemoteNamesFromConfig();
+        // 依次打印输出
         remoteNames.forEach(remoteName => {
             console.log(remoteName);
         });
     }
-
-    getRemoteDetails() {
+    parseRemoteDetailsFromConfig() {
         try {
             const config = this.config.read()
             if (config && config.remote) {
@@ -103,16 +107,16 @@ class GitvRemote {
         add: remoteName
     }, url) {
         try {
-            if (this.isRemoteRepositoryExists(remoteName)) {
-                throw new Error(`error: remote origin already exists.`);
-            }
+            // 确保提供了远程仓库名  
+            if (!remoteName) throw new Error('error: remoteName is required.');
+            // 检查远程仓库是否已经存在  
+            if (this.isRemoteRepositoryExists(remoteName)) throw new Error(`error: remote ${remoteName} already exists.`);
             const config = this.config.read();
             const newRemoteObj = {
-                url,
+                url: urlOrNewName,
                 fetch: `+refs/heads/*:refs/remotes/${remoteName}/*`
-            }
+            };
             config.remote[`${remoteName}`] = newRemoteObj;
-            // TODO objToGitConfigString方法有问题需要修改
             fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
         } catch (err) {
             throw err;
@@ -123,9 +127,10 @@ class GitvRemote {
         remove: remoteName
     }) {
         try {
-            if (!this.isRemoteRepositoryExists(remoteName)) {
-                throw new Error(`error: No such remote: 'origin-test'`);
-            }
+            // 确保提供了远程仓库名  
+            if (!remoteName) throw new Error('error: remoteName is required.');
+            // 检查远程仓库是否已经存在  
+            if (this.isRemoteRepositoryExists(remoteName)) throw new Error(`error: remote ${remoteName} already exists.`);
             const config = this.config.read();
             delete config.remote[`${remoteName}`];
             fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
@@ -139,12 +144,13 @@ class GitvRemote {
     }, url) {
         {
             try {
-                if (!this.isRemoteRepositoryExists(remoteName)) {
-                    throw new Error(`error: No such remote ${remoteName}`);
-                }
-                const config = this.config.read();
-                config.remote[`${remoteName}`].url = url;
-                fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
+                 // 确保提供了远程仓库名  
+            if (!remoteName) throw new Error('error: remoteName is required.');
+            // 检查远程仓库是否已经存在  
+            if (this.isRemoteRepositoryExists(remoteName)) throw new Error(`error: remote ${remoteName} already exists.`);
+            const config = this.config.read();
+            config.remote[`${remoteName}`].url = url;
+            fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
             } catch (err) {
                 throw err
             }
@@ -155,6 +161,8 @@ class GitvRemote {
         rename: oldName
     }, newName) {
         try {
+            // 确保提供了远程仓库名  
+            if (!remoteName) throw new Error('error: remoteName is required.');
             // 检查远程仓库列表，不存在名为 oldName 的远程仓库
             if (!this.isRemoteRepositoryExists(oldName)) {
                 throw new Error(`error: No such remote ${oldName} in repository`);
@@ -178,33 +186,31 @@ class GitvRemote {
         remoteName
     }, urlOrNewName) {
         try {
-            // 确保至少提供了远程仓库名  
-            if (!remoteName) {
-                throw new Error('error: remoteName is required.');
-            }
+            // 确保提供了远程仓库名  
+            if (!remoteName) throw new Error('error: remoteName is required.');
 
             const config = this.config.read();
 
             switch (operation) {
                 case 'add':
                     // 检查远程仓库是否已经存在  
-                    if (this.isRemoteRepositoryExists(remoteName)) {
-                        throw new Error(`error: remote ${remoteName} already exists.`);
-                    }
+                    if (this.isRemoteRepositoryExists(remoteName)) throw new Error(`error: remote ${remoteName} already exists.`);
+                    // 确保已提供有效的远程链接或新命名的标识符
+                    if (!urlOrNewName) throw new Error("Please provide the correct URL address.")
 
                     // 添加远程仓库  
                     const newRemoteObj = {
-                        url,
+                        url: urlOrNewName,
                         fetch: `+refs/heads/*:refs/remotes/${remoteName}/*`
                     };
+                    // 如果config.remote还没有被定义，我们可以先初始化它为一个空对象  
+                    config.remote = config.remote || {};
                     config.remote[`${remoteName}`] = newRemoteObj;
                     break;
 
                 case 'remove':
-                    // 检查远程仓库是否存在  
-                    if (!this.isRemoteRepositoryExists(remoteName)) {
-                        throw new Error(`error: No such remote: '${remoteName}'`);
-                    }
+                    // 检查远程仓库是否已经存在  
+                    if (this.isRemoteRepositoryExists(remoteName)) throw new Error(`error: remote ${remoteName} already exists.`);
 
                     // 移除远程仓库  
                     delete config.remote[`${remoteName}`];
@@ -238,7 +244,7 @@ class GitvRemote {
                     throw new Error('error: Unsupported operation.');
             }
 
-            // 写入配置  
+            // 写入config文件  
             fs.writeFileSync(utils.getResourcePath("config"), this.config.objToGitConfigString(config), "utf-8");
         } catch (err) {
             throw err;

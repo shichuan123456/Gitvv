@@ -4,7 +4,7 @@ const GitvInit = require("./GitvInit")
 const GitvAdd = require("./GitvAdd")
 const GitvRm = require("./GitvRm");
 const GitvBranch = require("./GitvBranch");
-// const GitvCommit = require("./GitvCommit");
+const GitvCommit = require("./GitvCommit");
 // const GitvClone = require("./GitvClone");
 
 // const GitvRemote = require("./GitvRemote");
@@ -43,9 +43,13 @@ class Gitv {
     }
   }
 
-  commit(options) {
-    this.gitvCommit = new GitvCommit(options)
-    this.gitvCommit.commit();
+  async commit(options) {
+    try {
+      this.gitvCommit  = new GitvCommit(options)
+      await this.gitvCommit.commit()
+    } catch(err) {
+      throw err
+    }
   }
 
   clone(remotePath, targetPath) {
@@ -58,18 +62,26 @@ class Gitv {
       this.gitvBranch = new GitvBranch(branchName, options)
       await this.gitvBranch.branch();
     } catch (err) {
-      throw error
+      throw err
     }
   }
 
   remote(url, options) {
-    this.gitvRemote = new GitvRemote(url, options)
-    this.gitvRemote.remote();
+    try {
+      this.gitvRemote = new GitvRemote(url, options)
+      this.gitvRemote.remote();
+    } catch (err) {
+      throw err
+    }
   }
 
-  log(options) {
-    this.gitvLog = new GitvLog(options)
-    this.gitvLog.log();
+  async log(options) {
+    try {
+      this.gitvLog = new GitvLog(options)
+      await this.gitvLog.log();
+    } catch (err) {
+      throw err
+    }
   }
 
   status(options) {

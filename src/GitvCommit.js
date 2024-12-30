@@ -113,8 +113,7 @@ class GitvCommit {
         // 将处理后的所有树对象字符串用换行符连接成一个完整的树对象字符串   
         const treeObject = treeObjects.join("\n") + "\n";
         try {
-            // 调用 index.writeObjects 方法（这个方法可能是自定义的，用于写入 Git 对象）  
-            // 并传入通过 utils.createGitObject 创建的 "tree" 对象  
+            // 调用 index.writeObjects 方法,并传入通过 utils.createGitObject 创建的 "tree" 对象  
             const result = await index.writeObjects(utils.createGitObject(treeObject, "tree"));
             // 返回写入操作的结果  
             return result;

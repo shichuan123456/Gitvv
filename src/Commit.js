@@ -26,14 +26,34 @@ class Commit {
         return this.ancestors(descendentHash).indexOf(ancestorHash) !== -1;
     }
 
+    static readCommit(commitId) {
+        let content
+        try {
+            const filePath = path.join(utils.getResourcePath(), 'objects', commitId.slice(0, 2), '/', commitId.slice(2))
+            content = fs.readFileSync(filePath, 'utf8').trim()
+            const treeHashRegex = /tree (\w+)/;
+            const match = content.match(treeHashRegex);
+
+            if (match) {
+                const treeHash = match[1];
+                console.log('Tree Hash:', treeHash);
+                return treeHash
+            } else {
+                console.log('Tree Hash not found');
+                return undefined;
+            }
+        } catch (error) {
+            return undefined
+        }
+    }
+
     ancestors(commitHash) {
         var parents = this.parentHashes(this.readCommit(commitHash));
         return util.flatten(parents.concat(parents.map(objects.ancestors)));
     }
 
     getParentSha() {
-        const parentHash = ref.getBranchHash(GitvRef.headFilePath)
-        return parentHash
+        return ref.getBranchHash(GitvRef.headFilePath)
     }
 
     getAuthor() {
@@ -58,17 +78,20 @@ class Commit {
         return createGitObject(commitLines.join('\n'), 'commit')
     }
 
-    getAllCommits(n = 0) {
-        const len = n === 0 ? Number.MAX_VALUE : n
+    getCommits() {
         let i = 0;
         const commits = [];
         let parentSha = this.getParentSha();
         while (parentSha && i < len) {
             i++
-            const filePath = path.join(utils.getResourcePath(), 'objects', parentSha.slice(0, 2), '/', parentSha.slice(2))
+            const filePath = path.join(utils.getResourcePath(),'objects',parentSha.slice(0,2),'/',parentSha.slice(2))
+            //读取到 commit 存储内容
             const commitContent = fs.readFileSync(filePath, 'utf8').trim()
+            // parseCommitObject 解析 commit 字符为对象格式
             const commitData = this.parseCommitObject(commitContent);
+            // 存储到 commits 数组
             commits.push(commitData);
+            // 重置父提交 hash，递归查找
             parentSha = commitData.parentSha;
         }
         return commits;

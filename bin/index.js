@@ -72,61 +72,60 @@ program
     try {
       gitv.branch(branchName, options);
     } catch (err) {
-      console.error(`Failed to create or modify the branch '${branchName}' in the Gitv repository. Error details:`, err);
+      console.error(`Failed to create or modify the branch '${branchName}' in the Gitv repository. Error details:`, err.message);
     }
   });
 
-// program
-//   .command('commit')
-//   // 添加 -m 或 --message 选项，并设置描述
-//   .option('-m, --message <message>', 'commit message')
-//   // 添加命令描述
-//   .description('Record changes to the repository')
-//   .action((options) => {
-//     // 检查 -m 参数是否已提供并且不为空  
-//     try {
-//       if (!options.message || options.message.trim() === '') {
-//         console.error('Error: Commit message is required and cannot be empty.');
-//         process.exit(1); // 退出程序并返回错误码 1  
-//       }
-//       gitv.commit(options);
-//     } catch (err) {
-//       console.error(`Failed to commit changes to the Gitv repository. Error details:`, err);
-//     }
-//   })
+program
+  .command('commit')
+  // 添加 -m 或 --message 选项，并设置描述
+  .option('-m, --message <message>', 'commit message')
+  // 添加命令描述
+  .description('Record changes to the repository')
+  .action((options) => {
+    // 检查 -m 参数是否已提供并且不为空  
+    try {
+      if (!options.message || options.message.trim() === '') {
+        throw new Error('Error: Commit message is required and cannot be empty.');
+      }
+      gitv.commit(options);
+    } catch (err) {
+      console.error(`Failed to commit changes to the Gitv repository. Error details:`, err.message);
+    }
+  })
 
 
 
-// program
-//   .command('remote [url]')
-//   .description('Manage remote repositories')
-//   .option('-v, --verbose', 'Be verbose and show detailed information')
-//   .option('--add <name> <url>', 'Add a new remote repository')
-//   .option('--remove <name>', 'Remove an existing remote repository')
-//   .option('--set-url <name> <url>', 'Change the URL of an existing remote repository')
-//   .option('--rename <oldName> <newName>', 'Rename an existing remote repository')
-//   .action((url, options) => {
-//     try {
-//       gitv.remote(url, options);
-//     } catch (err) {
-//       console.error("An error occurred while interacting with Gitv remotes. Error details:", err);
-//     }
-//   });
+program
+  .command('remote [url]')
+  .description('Manage remote repositories')
+  .option('-v, --verbose', 'Be verbose and show detailed information')
+  .option('--add <name> <url>', 'Add a new remote repository')
+  .option('--remove <name>', 'Remove an existing remote repository')
+  .option('--set-url <name> <url>', 'Change the URL of an existing remote repository')
+  .option('--rename <oldName> <newName>', 'Rename an existing remote repository')
+  .action(async (url, options) => {
+    try {
+      await gitv.remote(url, options);
+    } catch (err) {
+      console.error("An error occurred while interacting with Gitv remotes. Error details:", err.message);
+    }
+  });
 
-// // 定义 gitv log 命令  
-// program
-//   .command('log')
-//   .description('Show commit logs')
-//   .option('-n, --number <number>', 'Number of commits to show', parseInt) // 将输入的字符串转换为整数  
-//   .option('--oneline', 'Show each commit on a single line')
-//   .option('--graph', 'Draw a text-based graph of the commit history')
-//   .action((options) => {
-//     try {
-//       gitv.log(options);
-//     } catch (err) {
-//       console.error(`Failed to retrieve Git log. Error details:`, err);
-//     }
-//   });
+// 定义 gitv log 命令  
+program
+  .command('log')
+  .description('Show commit logs')
+  .option('-n, --number <number>', 'Number of commits to show', parseInt) // 将输入的字符串转换为整数  
+  .option('--oneline', 'Show each commit on a single line')
+  .option('--graph', 'Draw a text-based graph of the commit history')
+  .action(async (options) => {
+    try {
+      await gitv.log(options);
+    } catch (err) {
+      console.error("An error occurred while displaying Git logs. Error details:", err.message);
+    }
+  });
 
 // program
 //   .command('merge')
