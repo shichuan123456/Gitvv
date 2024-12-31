@@ -63,7 +63,7 @@ class GitvBranch {
         }
     }
 
-    async getAllBranches() {
+    async getBranches() {
         try {
             await this.getLocalBranches()
             await this.getRemoteBranches()
@@ -74,7 +74,7 @@ class GitvBranch {
 
     async addBranch(branchName) {
         try {
-            if(this.ref.isExistRef(this.branchName)) {
+            if(await this.ref.isExistRef(this.branchName)) {
                 console.error(`a branch named ${branchName} already exists`)
                 return false;
             }
