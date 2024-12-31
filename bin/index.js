@@ -147,11 +147,15 @@ program
 //   })
 
 // // 定义 gitv status 命令
-// program
-//   .command('status')
-//   .description('Show the status of the repository')
-//   .action(() => {
-//     gitv.status();
-//   });
+program
+  .command('status')
+  .description('Show the status of the repository')
+  .action(async () => {
+    try {
+      await gitv.status();
+    } catch (err) {
+      console.error("An error occurred while outputting the repository status. Error details:", err.message);
+    }
+  });
 
 program.parse()

@@ -7,9 +7,10 @@ const Commit = require('./Commit');
 
 class GitvStatus {
   constructor() {
+    // 工作区根目录
     this.gitvRepoPath = utils.getResourcePath();
     // HEAD文件的路径
-    this.headFilePath = path.join(this.gitvRepoPath, 'HEAD');
+    this.headFilePath = utils.getResourcePath("HEAD");
     this.ref = new GitvRef();
   }
 

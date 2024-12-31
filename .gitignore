@@ -1,3 +1,4 @@
 node_modules
 .gitv
 test-gitv
+src/*.md
