@@ -96,36 +96,36 @@ program
 
 
 
-program
-  .command('remote [url]')
-  .description('Manage remote repositories')
-  .option('-v, --verbose', 'Be verbose and show detailed information')
-  .option('--add <name> <url>', 'Add a new remote repository')
-  .option('--remove <name>', 'Remove an existing remote repository')
-  .option('--set-url <name> <url>', 'Change the URL of an existing remote repository')
-  .option('--rename <oldName> <newName>', 'Rename an existing remote repository')
-  .action(async (url, options) => {
-    try {
-      await gitv.remote(url, options);
-    } catch (err) {
-      console.error("An error occurred while interacting with Gitv remotes. Error details:", err.message);
-    }
-  });
+// program
+//   .command('remote [url]')
+//   .description('Manage remote repositories')
+//   .option('-v, --verbose', 'Be verbose and show detailed information')
+//   .option('--add <name> <url>', 'Add a new remote repository')
+//   .option('--remove <name>', 'Remove an existing remote repository')
+//   .option('--set-url <name> <url>', 'Change the URL of an existing remote repository')
+//   .option('--rename <oldName> <newName>', 'Rename an existing remote repository')
+//   .action(async (url, options) => {
+//     try {
+//       await gitv.remote(url, options);
+//     } catch (err) {
+//       console.error("An error occurred while interacting with Gitv remotes. Error details:", err.message);
+//     }
+//   });
 
-// 定义 gitv log 命令  
-program
-  .command('log')
-  .description('Show commit logs')
-  .option('-n, --number <number>', 'Number of commits to show', parseInt) // 将输入的字符串转换为整数  
-  .option('--oneline', 'Show each commit on a single line')
-  .option('--graph', 'Draw a text-based graph of the commit history')
-  .action(async (options) => {
-    try {
-      await gitv.log(options);
-    } catch (err) {
-      console.error("An error occurred while displaying Git logs. Error details:", err.message);
-    }
-  });
+// // 定义 gitv log 命令  
+// program
+//   .command('log')
+//   .description('Show commit logs')
+//   .option('-n, --number <number>', 'Number of commits to show', parseInt) // 将输入的字符串转换为整数  
+//   .option('--oneline', 'Show each commit on a single line')
+//   .option('--graph', 'Draw a text-based graph of the commit history')
+//   .action(async (options) => {
+//     try {
+//       await gitv.log(options);
+//     } catch (err) {
+//       console.error("An error occurred while displaying Git logs. Error details:", err.message);
+//     }
+//   });
 
 // program
 //   .command('merge')
