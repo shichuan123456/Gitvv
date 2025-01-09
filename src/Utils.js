@@ -152,9 +152,12 @@ class Utils {
             const fileList = await Promise.all(files.map(async (file) => {
                 const filePath = path.join(pathOrFile, file);
                 const fileStats = await fsPromise.stat(filePath);
+                const gitvPath = this.getResourcePath().replace(/\\+$/, '')
                 if (fileStats.isDirectory()) {
                     // 如果是目录，递归搜集子目录中的文件
-                    return this.collectFiles(filePath);
+                    if (filePath !== gitvPath) {
+                        return this.collectFiles(filePath);
+                    }
                 } else {
                     // 如果是文件，直接返回文件路径 
                     return filePath;

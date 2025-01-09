@@ -26,7 +26,7 @@ program
     try {
       await gitv.init(directoryTarget, options)
     } catch (error) { 
-      console.error(`Failed to initialize Gitv repository in ${utils.resolveAbsolutePath(pathOrFile)}. Error details:`, error.message);
+      console.error(`Failed to initialize Gitv repository in ${utils.resolveAbsolutePath(directoryTarget)}. Error details:`, error.message);
     }
   })
 
